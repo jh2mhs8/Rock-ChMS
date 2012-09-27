@@ -22,29 +22,22 @@ namespace RockWeb.Blocks.Administration
     {
         #region Fields
 
-        protected string typeId = string.Empty;
-        protected string entity = string.Empty;
-        protected string entityQualifierColumn = string.Empty;
-                        
-        private bool canConfigure = false;
-        private Rock.Core.DefinedTypeService typeService = new Rock.Core.DefinedTypeService();
+		private const string entity = "Rock.Core.DefinedValue";
+		private const string qualifier = "DefinedTypeId";
+				
+		private Rock.Core.DefinedTypeService typeService = new Rock.Core.DefinedTypeService();
 		private Rock.Core.DefinedValueService valueService = new Rock.Core.DefinedValueService();
-        private Rock.Core.AttributeService attributeService = new Rock.Core.AttributeService();
+		private Rock.Core.AttributeService attributeService = new Rock.Core.AttributeService();
+		private bool canConfigure = false;
+		
+		#endregion
 
-        #endregion
+		#region Control Methods
 
-        #region Control Methods
-
-        protected override void OnInit( EventArgs e )
-        {
-            try
-            {                                                
-                typeId = null;
-                if ( string.IsNullOrWhiteSpace( typeId ) )
-                    typeId = PageParameter( "typeId" );
-
-                entity = "Rock.Core.DefinedValue";
-                entityQualifierColumn = "DefinedTypeId";
+		protected override void OnInit( EventArgs e )
+		{
+			try
+			{				
                 canConfigure = PageInstance.IsAuthorized( "Configure", CurrentPerson );
 
                 BindFilter();
@@ -55,29 +48,37 @@ namespace RockWeb.Blocks.Administration
                     rGridType.DataKeyNames = new string[] { "id" };
                     rGridType.GridRebind += new GridRebindEventHandler( rGridType_GridRebind );
                     rGridType.Actions.IsAddEnabled = true;
-                    rGridType.Actions.ClientAddScript = "editType(0)";
+					rGridType.Actions.AddClick += rGridType_Add;
+                    //rGridType.Actions.ClientAddScript = "editType(0)";
 
 					//assign type values grid actions
 					rGridValue.DataKeyNames = new string[] { "id" };
 					rGridValue.GridRebind += new GridRebindEventHandler( rGridValue_GridRebind );
 					rGridValue.Actions.IsAddEnabled = true;
-					rGridValue.Actions.ClientAddScript = "editValue(0)";
+					rGridValue.Actions.AddClick += rGridValue_Add;
+					//rGridValue.Actions.ClientAddScript = "editValue(0)";
 
                     //assign attributes grid actions
                     rGridAttribute.DataKeyNames = new string[] { "id" };
                     rGridAttribute.GridRebind += new GridRebindEventHandler( rGridAttribute_GridRebind );
                     rGridAttribute.Actions.IsAddEnabled = true;
-                    rGridAttribute.Actions.ClientAddScript = "editAttribute(0)";
+					rGridAttribute.Actions.AddClick += rGridAttribute_Add;
+                    //rGridAttribute.Actions.ClientAddScript = "editAttribute(0)";
 
-					string script = string.Format( @"
+					modalAttributes.SaveClick += btnSaveAttribute_Click;
+					modalAttributes.OnCancelScript = string.Format( "$('#{0}').val('');", hfIdAttribute.ClientID );
+
+					modalValues.SaveClick += btnSaveValue_Click;
+					modalValues.OnCancelScript = string.Format( "$('#{0}').val('');", hfIdValue.ClientID );
+
+					this.Page.ClientScript.RegisterStartupScript( this.GetType(), 
+						string.Format( "grid-confirm-delete-{0}", BlockInstance.Id ), @"
                         Sys.Application.add_load(function () {{
                             $('td.grid-icon-cell.delete a').click(function(){{
-                                return confirm('Are you sure you want to delete this setting?');
+                                return confirm('Are you sure you want to delete this value?');
                             }});
-                        }});
-                    ", rGridType.ClientID );
-
-					this.Page.ClientScript.RegisterStartupScript( this.GetType(), string.Format( "grid-confirm-delete-{0}", rGridValue.ClientID ), script, true );
+                        }});", true 
+					);
 
                 }
                 else
@@ -103,27 +104,96 @@ namespace RockWeb.Blocks.Administration
 
         #endregion
 
-        #region Grid Events
-
-		protected void ddlDefinedValueFilter_SelectedIndexChanged( object sender, EventArgs e )
-        {
-            rGridValue_Bind( typeId );
-        }
-
+        #region Events
 
         protected void ddlCategoryFilter_SelectedIndexChanged( object sender, EventArgs e )
         {
-            rGridType_Bind();
+			rGridType_Bind();
         }
 
-        protected void rGridType_Delete( object sender, RowEventArgs e )
-        {
-            Rock.Core.DefinedType type = typeService.Get( (int)rGridType.DataKeys[e.RowIndex]["id"] );
+		protected void btnSaveType_Click( object sender, EventArgs e )
+		{
 			
+		}
+
+		protected void btnCancelType_Click( object sender, EventArgs e )
+		{
+			pnlTypeDetails.Visible = false;
+			pnlTypes.Visible = true;
+		}
+
+		protected void btnSaveAttribute_Click( object sender, EventArgs e )
+		{
+
+		}
+
+		protected void btnCloseAttribute_Click( object sender, EventArgs e )
+		{
+			pnlAttributes.Visible = false;
+			pnlTypes.Visible = true;
+		}
+
+		protected void btnSaveValue_Click( object sender, EventArgs e )
+		{
+
+		}
+
+		protected void btnCloseValue_Click( object sender, EventArgs e )
+		{
+			pnlValues.Visible = false;
+			pnlTypes.Visible = true;
+		}
+
+		protected void btnRefresh_Click( object sender, EventArgs e )
+		{
+			typeId = hfIdType.Value;
+
+			BindFilter();
+			rGridType_Bind();
+			rGridValue_Bind( typeId );
+			rGridAttribute_Bind( typeId );
+		}
+
+        #endregion
+
+        #region Edit Methods       
+		protected void rGridType_Add( object sender, EventArgs e  )
+		{
+			ShowEditType( 0 );
+		}
+
+		protected void rGridType_EditValue( object sender, RowEventArgs e )
+		{
+			typeId = hfIdType.Value = rGridType.DataKeys[e.RowIndex]["id"].ToString();
+			rGridValue_Bind( typeId );
+
+			pnlTypes.Visible = false;
+			pnlValues.Visible = true;
+		}
+
+		protected void rGridType_Edit( object sender, RowEventArgs e )
+		{
+			typeId = hfIdType.Value = rGridType.DataKeys[e.RowIndex]["id"].ToString();
+			ShowEditType( typeId );
+		}
+
+		protected void rGridType_EditAttribute( object sender, RowEventArgs e ) 
+		{
+			typeId = hfIdType.Value = rGridType.DataKeys[e.RowIndex]["id"].ToString();
+			rGridAttribute_Bind( typeId );
+
+			pnlTypes.Visible = false;
+			pnlAttributes.Visible = true;		
+		}
+
+		protected void rGridType_Delete( object sender, RowEventArgs e )
+		{
+			Rock.Core.DefinedType type = typeService.Get( (int)rGridType.DataKeys[e.RowIndex]["id"] );
+
 			if ( type != null )
-            {
-                Rock.Web.Cache.Attribute.Flush( type.Id );
-				
+			{
+				Rock.Web.Cache.Attribute.Flush( type.Id );
+
 				// if this DefinedType has DefinedValues, delete them
 				var hasDefinedValues = valueService
 				.GetByDefinedTypeId( type.Id )
@@ -135,18 +205,67 @@ namespace RockWeb.Blocks.Administration
 					valueService.Save( value, CurrentPersonId );
 				}
 
-                typeService.Delete( type, CurrentPersonId );
-                typeService.Save( type, CurrentPersonId );
-            }
+				typeService.Delete( type, CurrentPersonId );
+				typeService.Save( type, CurrentPersonId );
+			}
 
-            rGridType_Bind();
-        }
+			rGridType_Bind();
+		}
 
-        protected void rGridValue_Delete( object sender, RowEventArgs e )
+		void rGridType_GridRebind( object sender, EventArgs e )
+		{
+			rGridType_Bind();
+		}        
+		
+		protected void rGridAttribute_Add( object sender, EventArgs e )
+		{
+			ShowEditAttribute( 0 );
+			modalAttributes.Show();
+		}		
+
+		protected void rGridAttribute_Edit( object sender, RowEventArgs e )
+		{
+			attributeId = hfIdAttribute.Value = rGridAttribute.DataKeys[e.RowIndex]["id"].ToString();
+			ShowEditAttribute( attributeId );
+			modalAttributes.Show();
+		}
+
+		protected void rGridAttribute_Delete( object sender, RowEventArgs e )
+		{
+			Rock.Core.Attribute attribute = attributeService.Get( (int)rGridAttribute.DataKeys[e.RowIndex]["id"] );
+			if ( attribute != null )
+			{
+				Rock.Web.Cache.Attribute.Flush( attribute.Id );
+
+				attributeService.Delete( attribute, CurrentPersonId );
+				attributeService.Save( attribute, CurrentPersonId );
+			}
+
+			rGridAttribute_Bind( hfIdType.Value );
+		}
+
+		void rGridAttribute_GridRebind( )
+		{
+			rGridAttribute_Bind( hfIdType.Value );
+		}
+		
+        protected void rGridValue_Add( object sender, EventArgs e )
+		{
+			ShowEditValue( 0 );
+			modalValues.Show();
+		}
+
+		protected void rGridValue_Edit( object sender, RowEventArgs e )
+		{
+			valueId = hfIdValue.Value = rGridValue.DataKeys[e.RowIndex]["id"].ToString();
+			ShowEditValue( valueId );
+		}
+				
+		protected void rGridValue_Delete( object sender, RowEventArgs e )
 		{
 			Rock.Core.DefinedValue value = valueService.Get( (int)rGridValue.DataKeys[e.RowIndex]["id"] );
 
-			if ( value != null)
+			if ( value != null )
 			{
 				Rock.Web.Cache.Attribute.Flush( value.Id );
 
@@ -157,81 +276,11 @@ namespace RockWeb.Blocks.Administration
 			rGridValue_Bind( typeId );
 		}
 		
-		protected void rGridAttribute_Delete( object sender, RowEventArgs e )
-        {
-            Rock.Core.Attribute attribute = attributeService.Get( (int)rGridAttribute.DataKeys[e.RowIndex]["id"] );
-            if ( attribute != null )
-            {
-                Rock.Web.Cache.Attribute.Flush( attribute.Id );
-
-                attributeService.Delete( attribute, CurrentPersonId );
-                attributeService.Save( attribute, CurrentPersonId );
-            }
-
-            rGridAttribute_Bind( hfTypeId.Value );
-        }
-		
-        void rGridType_GridRebind( object sender, EventArgs e )
-        {
-            rGridType_Bind();
-        }
-
-        void rGridValue_GridRebind( object sender, EventArgs e )
+		void rGridValue_GridRebind( object sender, EventArgs e )
 		{
-			rGridValue_Bind( typeId );
+			rGridValue_Bind( hfIdType.Value );
 		}
-
-		void rGridAttribute_GridRebind( object sender, EventArgs e )
-        {
-            rGridAttribute_Bind( typeId );
-        }
-		
-        #endregion
-
-        #region Edit Events
-
-        protected void btnRefresh_Click( object sender, EventArgs e )
-        {
-			typeId = hfTypeId.Value;
-
-            BindFilter();
-            rGridType_Bind();
-			rGridValue_Bind( typeId );
-			rGridAttribute_Bind( typeId );
-        }
-
-		protected void typeValues_Edit( object sender, CommandEventArgs e )
-        {
-            typeId = e.CommandArgument.ToString();
-			hfTypeId.Value = typeId;
-			rGridValue_Bind( typeId );
-			
-			pnlContent.Visible = false;
-			pnlValues.Visible = true;
-        }
-
-		protected void btnValueClose_Click( object sender, EventArgs e )
-		{
-			pnlValues.Visible = false;
-			pnlContent.Visible = true;
-		}
-
-        protected void typeAttributes_Edit( object sender, RowEventArgs e )
-        {
-            typeId = rGridType.DataKeys[e.RowIndex]["id"].ToString();
-            hfTypeId.Value = typeId;            			
-            rGridAttribute_Bind( typeId );
-
-            pnlContent.Visible = false;
-            pnlAttributes.Visible = true;            
-        }
-
-        protected void btnAttributeClose_Click( object sender, EventArgs e )
-        {
-            pnlAttributes.Visible = false;
-            pnlContent.Visible = true;            
-        }
-
+						        
         #endregion
 
         #region Internal Methods
@@ -255,7 +304,7 @@ namespace RockWeb.Blocks.Administration
 			}
         }
 
-        private void rGridType_Bind()
+		private void rGridType_Bind()
         {
             var queryable = typeService.Queryable().
                 Where( a => a.Category != "" && a.Category != null );
@@ -273,10 +322,10 @@ namespace RockWeb.Blocks.Administration
 
 		protected void rGridValue_Bind( string typeId )
 		{
-			int definedTypeId = Convert.ToInt32( typeId );
+			int definedTypeId = Int32.Parse( typeId );
 						
 			var gridAttributes = attributeService
-				.GetAttributesByEntityQualifier( entity, entityQualifierColumn, typeId )
+				.GetAttributesByEntityQualifier( entity, qualifier, typeId )
 				.Where( attr => attr.IsGridColumn );
 
 			tbValueGridColumn.Text = string.Join(",",
@@ -294,11 +343,11 @@ namespace RockWeb.Blocks.Administration
 			rGridValue.DataBind();
 		}
 
-        protected void rGridAttribute_Bind( string typeId )
+		protected void rGridAttribute_Bind( string typeId )
         {
             var queryable = attributeService.Queryable().
                 Where( a => a.Entity == entity &&
-                ( a.EntityQualifierColumn ?? string.Empty ) == entityQualifierColumn &&
+				( a.EntityQualifierColumn ?? string.Empty ) == qualifier &&
 				( a.EntityQualifierValue ?? string.Empty ) == typeId );
 
             rGridAttribute.DataSource = queryable.
@@ -307,8 +356,23 @@ namespace RockWeb.Blocks.Administration
                 ToList();
 
             rGridAttribute.DataBind();
-
         }
+
+		protected void ShowEditType( int typeId )
+		{
+			
+			
+			pnlTypes.Visible = false;
+			pnlTypeDetails.Visible = true;
+		}
+
+		protected void ShowEditAttribute( int attributeId )
+		{ 
+		}
+
+		protected void ShowEditValue( int valueId )
+		{
+		}
         
         private void DisplayError( string message )
         {
@@ -316,7 +380,7 @@ namespace RockWeb.Blocks.Administration
             pnlMessage.Controls.Add( new LiteralControl( message ) );
             pnlMessage.Visible = true;
 
-            pnlContent.Visible = false;
+            pnlTypes.Visible = false;
 			pnlValues.Visible = false;
 			pnlAttributes.Visible = false;
         }
