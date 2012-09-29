@@ -20,7 +20,7 @@ namespace Rock.Com.CCVOnline.Service
     {
 		static public Rock.Net.WebResponse SendRecordingRequest( string app, string streamName, string recordingName, string action )
         {
-            var globalAttributes = Rock.Web.Cache.GlobalAttributes.Read();
+            var globalAttributes = Rock.Web.Cache.GlobalAttributesCache.Read();
 
             if ( globalAttributes.AttributeValues.ContainsKey( "ccvonlineWowzaServer" ) )
             {
