@@ -51,9 +51,29 @@ namespace Rock.Crm
 		[DataMember]
 		public string Number { get; set; }
 
+		/// <summary>
+		/// Gets or sets the extension
+		/// </summary>
+		[MaxLength( 20 )]
+		[DataMember]
+		public string Extension { get; set; }
+
+		/// <summary>
+		/// Type of phone number
+		/// </summary>
 		[DataMember]
 		public int? NumberTypeId { get; set; }
 
+		/// <summary>
+		/// Gets or sets whether the number has been opted in for SMS
+		/// </summary>
+		[Required]
+		[DataMember]
+		public bool IsMessagingEnabled { get; set; }
+
+		/// <summary>
+		/// The phone number type
+		/// </summary>
 		public virtual Core.DefinedValue NumberType { get; set; }
 
 		/// <summary>
@@ -125,22 +145,6 @@ namespace Rock.Crm
 		public virtual Person Person { get; set; }
         
 		/// <summary>
-        /// Gets or sets the Created By Person.
-        /// </summary>
-        /// <value>
-        /// A <see cref="Person"/> object.
-        /// </value>
-		public virtual Person CreatedByPerson { get; set; }
-        
-		/// <summary>
-        /// Gets or sets the Modified By Person.
-        /// </summary>
-        /// <value>
-        /// A <see cref="Person"/> object.
-        /// </value>
-		public virtual Person ModifiedByPerson { get; set; }
-
-		/// <summary>
 		/// Static Method to return an object based on the id
 		/// </summary>
 		/// <param name="id">The id.</param>
@@ -184,8 +188,6 @@ namespace Rock.Crm
         {
 			this.HasRequired( p => p.Person ).WithMany( p => p.PhoneNumbers ).HasForeignKey( p => p.PersonId ).WillCascadeOnDelete(false);
 			this.HasOptional( p => p.NumberType ).WithMany().HasForeignKey( p => p.NumberTypeId ).WillCascadeOnDelete( false );
-			this.HasOptional( p => p.CreatedByPerson ).WithMany().HasForeignKey( p => p.CreatedByPersonId ).WillCascadeOnDelete( false );
-			this.HasOptional( p => p.ModifiedByPerson ).WithMany().HasForeignKey( p => p.ModifiedByPersonId ).WillCascadeOnDelete(false);
 		}
     }
 }
