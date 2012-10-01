@@ -38,7 +38,7 @@ namespace RockWeb.Blocks.Administration
 		{
 			try
 			{				
-                canConfigure = PageInstance.IsAuthorized( "Configure", CurrentPerson );
+                canConfigure = CurrentPage.IsAuthorized( "Configure", CurrentPerson );
 
                 BindFilter();
 
@@ -72,7 +72,7 @@ namespace RockWeb.Blocks.Administration
 					modalValues.OnCancelScript = string.Format( "$('#{0}').val('');", hfIdValue.ClientID );
 
 					this.Page.ClientScript.RegisterStartupScript( this.GetType(), 
-						string.Format( "grid-confirm-delete-{0}", BlockInstance.Id ), @"
+						string.Format( "grid-confirm-delete-{0}", CurrentBlock.Id ), @"
                         Sys.Application.add_load(function () {{
                             $('td.grid-icon-cell.delete a').click(function(){{
                                 return confirm('Are you sure you want to delete this value?');
@@ -146,12 +146,10 @@ namespace RockWeb.Blocks.Administration
 
 		protected void btnRefresh_Click( object sender, EventArgs e )
 		{
-			typeId = hfIdType.Value;
-
 			BindFilter();
 			rGridType_Bind();
-			rGridValue_Bind( typeId );
-			rGridAttribute_Bind( typeId );
+			rGridValue_Bind( hfIdType.Value );
+			rGridAttribute_Bind( hfIdType.Value );
 		}
 
         #endregion
@@ -162,10 +160,11 @@ namespace RockWeb.Blocks.Administration
 			ShowEditType( 0 );
 		}
 
-		protected void rGridType_EditValue( object sender, RowEventArgs e )
+		protected void rGridType_EditValue( object sender, EventArgs e )
 		{
-			typeId = hfIdType.Value = rGridType.DataKeys[e.RowIndex]["id"].ToString();
-			rGridValue_Bind( typeId );
+			
+			//hfIdType.Value = rGridType.DataKeys[e.RowIndex]["id"].ToString();
+			rGridValue_Bind( hfIdType.Value );
 
 			pnlTypes.Visible = false;
 			pnlValues.Visible = true;
@@ -173,14 +172,14 @@ namespace RockWeb.Blocks.Administration
 
 		protected void rGridType_Edit( object sender, RowEventArgs e )
 		{
-			typeId = hfIdType.Value = rGridType.DataKeys[e.RowIndex]["id"].ToString();
-			ShowEditType( typeId );
+			hfIdType.Value = rGridType.DataKeys[e.RowIndex]["id"].ToString();
+			ShowEditType( Int32.Parse(hfIdType.Value) );
 		}
 
 		protected void rGridType_EditAttribute( object sender, RowEventArgs e ) 
 		{
-			typeId = hfIdType.Value = rGridType.DataKeys[e.RowIndex]["id"].ToString();
-			rGridAttribute_Bind( typeId );
+			hfIdType.Value = rGridType.DataKeys[e.RowIndex]["id"].ToString();
+			rGridAttribute_Bind( hfIdType.Value );
 
 			pnlTypes.Visible = false;
 			pnlAttributes.Visible = true;		
@@ -225,8 +224,8 @@ namespace RockWeb.Blocks.Administration
 
 		protected void rGridAttribute_Edit( object sender, RowEventArgs e )
 		{
-			attributeId = hfIdAttribute.Value = rGridAttribute.DataKeys[e.RowIndex]["id"].ToString();
-			ShowEditAttribute( attributeId );
+			hfIdAttribute.Value = rGridAttribute.DataKeys[e.RowIndex]["id"].ToString();
+			ShowEditAttribute( Int32.Parse(hfIdAttribute.Value) );
 			modalAttributes.Show();
 		}
 
@@ -244,7 +243,7 @@ namespace RockWeb.Blocks.Administration
 			rGridAttribute_Bind( hfIdType.Value );
 		}
 
-		void rGridAttribute_GridRebind( )
+		void rGridAttribute_GridRebind( object sender, EventArgs e )
 		{
 			rGridAttribute_Bind( hfIdType.Value );
 		}
@@ -257,8 +256,8 @@ namespace RockWeb.Blocks.Administration
 
 		protected void rGridValue_Edit( object sender, RowEventArgs e )
 		{
-			valueId = hfIdValue.Value = rGridValue.DataKeys[e.RowIndex]["id"].ToString();
-			ShowEditValue( valueId );
+			hfIdValue.Value = rGridValue.DataKeys[e.RowIndex]["id"].ToString();
+			ShowEditValue( Int32.Parse(hfIdValue.Value) );
 		}
 				
 		protected void rGridValue_Delete( object sender, RowEventArgs e )
@@ -273,7 +272,7 @@ namespace RockWeb.Blocks.Administration
 				valueService.Save( value, CurrentPersonId );
 			}
 
-			rGridValue_Bind( typeId );
+			rGridValue_Bind( hfIdType.Value );
 		}
 		
 		void rGridValue_GridRebind( object sender, EventArgs e )
