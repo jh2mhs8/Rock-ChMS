@@ -11,6 +11,7 @@ using System.Web.Http;
 
 using Rock.Com.CCVOnline.Service;
 using Rock.Rest;
+using Rock.Rest.Filters;
 
 namespace Rock.Com.CCVOnline.Rest.Service
 {
@@ -42,6 +43,7 @@ namespace Rock.Com.CCVOnline.Rest.Service
 		}
 
 		[HttpGet]
+		[Authenticate]
 		public RecordingDto Start( int campusId, string label, string app, string stream, string recording )
 		{
 			var user = this.CurrentUser();
@@ -59,6 +61,7 @@ namespace Rock.Com.CCVOnline.Rest.Service
 		}
 
 		[HttpGet]
+		[Authenticate]
 		public RecordingDto Stop( int campusId, string label, string app, string stream, string recording )
 		{
 			var user = this.CurrentUser();
@@ -76,6 +79,7 @@ namespace Rock.Com.CCVOnline.Rest.Service
 		}
 
 		[HttpGet]
+		[Authenticate]
 		public IEnumerable<DateTime> Dates( string qualifier )
 		{
 			var user = this.CurrentUser();
