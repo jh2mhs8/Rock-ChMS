@@ -22,14 +22,14 @@ namespace RockWeb.Blocks.Administration
     {
         #region Fields
 
-		private const string entity = "Rock.Core.DefinedValue";
-		private const string qualifier = "DefinedTypeId";
-				
+		private string _entityType = typeof( Rock.Core.DefinedValue ).ToString();
+		private string _entityQualifier = "DefinedTypeId";
+						
 		private Rock.Core.DefinedTypeService typeService = new Rock.Core.DefinedTypeService();
 		private Rock.Core.DefinedValueService valueService = new Rock.Core.DefinedValueService();
 		private Rock.Core.AttributeService attributeService = new Rock.Core.AttributeService();
 		private bool canConfigure = false;
-		
+				
 		#endregion
 
 		#region Control Methods
@@ -113,7 +113,40 @@ namespace RockWeb.Blocks.Administration
 
 		protected void btnSaveType_Click( object sender, EventArgs e )
 		{
-			
+			using ( new Rock.Data.UnitOfWorkScope() )
+			{
+				typeService = new Rock.Core.DefinedTypeService();
+
+				Rock.Core.DefinedType definedType;
+
+				int typeId = (( hfIdType.Value ) != null && hfIdType.Value != String.Empty ) ? Int32.Parse( hfIdType.Value ) : 0;
+
+				if ( typeId == 0 )
+				{
+					definedType = new Rock.Core.DefinedType();
+					definedType.IsSystem = false;
+					definedType.Order = 0;
+					typeService.Add( definedType, CurrentPersonId );
+				}
+				else
+				{
+					Rock.Web.Cache.DefinedTypeCache.Flush( typeId );
+					definedType = typeService.Get( typeId );
+				}
+
+				definedType.Name = tbTypeName.Text;
+				definedType.Category = tbTypeCategory.Text;
+				definedType.Description = tbTypeDescription.Text;
+				//definedType.FieldType = ddlTypeFieldType.SelectedValue;
+				definedType.FieldTypeId = Int32.Parse( ddlTypeFieldType.SelectedValue );
+				
+				typeService.Save( definedType, CurrentPersonId );
+			}
+
+			rGridType_Bind();
+
+			pnlTypeDetails.Visible = false;
+			pnlTypes.Visible = true;
 		}
 
 		protected void btnCancelType_Click( object sender, EventArgs e )
@@ -124,7 +157,43 @@ namespace RockWeb.Blocks.Administration
 
 		protected void btnSaveAttribute_Click( object sender, EventArgs e )
 		{
+			using ( new Rock.Data.UnitOfWorkScope() )
+			{
+				attributeService = new AttributeService();
 
+				Rock.Core.Attribute attribute;
+
+				int attributeId = ( ( hfIdAttribute.Value ) != null && hfIdAttribute.Value != String.Empty ) ? Int32.Parse( hfIdAttribute.Value ) : 0;
+				if ( attributeId == 0 )
+				{
+					attribute = new Rock.Core.Attribute();
+					attribute.IsSystem = false;
+					attribute.Entity = _entityType;
+					attribute.EntityQualifierColumn = _entityQualifier;
+				}
+				else
+				{
+					Rock.Web.Cache.AttributeCache.Flush( attributeId );
+					attribute = attributeService.Get( attributeId );
+				}
+
+				attribute.Key = tbAttributeKey.Text;
+				attribute.Name = tbAttributeName.Text;
+				attribute.Category = tbAttributeCategory.Text;
+				attribute.Description = tbAttributeDescription.Text;
+				attribute.FieldTypeId = Int32.Parse( ddlAttributeFieldType.SelectedValue );
+				attribute.DefaultValue = tbAttributeDefaultValue.Text;
+				attribute.IsGridColumn = cbAttributeGridColumn.Checked;
+				attribute.IsRequired = cbAttributeRequired.Checked;
+				attribute.EntityQualifierValue = hfIdType.Value;
+
+				attributeService.Save( attribute, CurrentPersonId );
+			}
+
+			rGridAttribute_Bind( hfIdType.Value );
+
+			modalAttributes.Hide();
+			pnlAttributes.Visible = true;
 		}
 
 		protected void btnCloseAttribute_Click( object sender, EventArgs e )
@@ -135,7 +204,35 @@ namespace RockWeb.Blocks.Administration
 
 		protected void btnSaveValue_Click( object sender, EventArgs e )
 		{
+			using ( new Rock.Data.UnitOfWorkScope() )
+			{
+				valueService = new DefinedValueService();
 
+				Rock.Core.DefinedValue definedValue;
+
+				int valueId = ( ( hfIdValue.Value ) != null && hfIdValue.Value != String.Empty ) ? Int32.Parse( hfIdValue.Value ) : 0;
+				if ( valueId == 0 )
+				{
+					definedValue = new Rock.Core.DefinedValue();
+					definedValue.IsSystem = false;					
+				}
+				else
+				{
+					Rock.Web.Cache.AttributeCache.Flush( valueId );
+					definedValue = valueService.Get( valueId );
+				}
+
+				definedValue.Name = tbValueName.Text;
+				definedValue.Description = tbValueDescription.Text;
+				definedValue.DefinedTypeId = Int32.Parse( hfIdType.Value );
+				
+				valueService.Save( definedValue, CurrentPersonId );
+			}
+
+			rGridValue_Bind( hfIdType.Value );
+
+			modalValues.Hide();
+			pnlValues.Visible = true;
 		}
 
 		protected void btnCloseValue_Click( object sender, EventArgs e )
@@ -160,12 +257,14 @@ namespace RockWeb.Blocks.Administration
 			ShowEditType( 0 );
 		}
 
-		protected void rGridType_EditValue( object sender, EventArgs e )
+		protected void rGridType_EditValue( object sender, CommandEventArgs e )
 		{
 			
+			//rGridType.DataKeys[
 			//hfIdType.Value = rGridType.DataKeys[e.RowIndex]["id"].ToString();
-			rGridValue_Bind( hfIdType.Value );
-
+			hfIdType.Value = e.CommandArgument.ToString();			
+			rGridValue_Bind( hfIdType.Value );			
+			
 			pnlTypes.Visible = false;
 			pnlValues.Visible = true;
 		}
@@ -191,8 +290,6 @@ namespace RockWeb.Blocks.Administration
 
 			if ( type != null )
 			{
-				Rock.Web.Cache.Attribute.Flush( type.Id );
-
 				// if this DefinedType has DefinedValues, delete them
 				var hasDefinedValues = valueService
 				.GetByDefinedTypeId( type.Id )
@@ -234,8 +331,6 @@ namespace RockWeb.Blocks.Administration
 			Rock.Core.Attribute attribute = attributeService.Get( (int)rGridAttribute.DataKeys[e.RowIndex]["id"] );
 			if ( attribute != null )
 			{
-				Rock.Web.Cache.Attribute.Flush( attribute.Id );
-
 				attributeService.Delete( attribute, CurrentPersonId );
 				attributeService.Save( attribute, CurrentPersonId );
 			}
@@ -266,8 +361,6 @@ namespace RockWeb.Blocks.Administration
 
 			if ( value != null )
 			{
-				Rock.Web.Cache.Attribute.Flush( value.Id );
-
 				valueService.Delete( value, CurrentPersonId );
 				valueService.Save( value, CurrentPersonId );
 			}
@@ -324,7 +417,9 @@ namespace RockWeb.Blocks.Administration
 			int definedTypeId = Int32.Parse( typeId );
 						
 			var gridAttributes = attributeService
-				.GetAttributesByEntityQualifier( entity, qualifier, typeId )
+				.GetAttributesByEntityQualifier( typeof( Rock.Core.DefinedValue).ToString()
+					, _entityQualifier
+					, typeId )
 				.Where( attr => attr.IsGridColumn );
 
 			tbValueGridColumn.Text = string.Join(",",
@@ -345,8 +440,8 @@ namespace RockWeb.Blocks.Administration
 		protected void rGridAttribute_Bind( string typeId )
         {
             var queryable = attributeService.Queryable().
-                Where( a => a.Entity == entity &&
-				( a.EntityQualifierColumn ?? string.Empty ) == qualifier &&
+				Where( a => a.Entity == _entityType &&
+				( a.EntityQualifierColumn ?? string.Empty ) == _entityQualifier &&
 				( a.EntityQualifierValue ?? string.Empty ) == typeId );
 
             rGridAttribute.DataSource = queryable.
@@ -359,18 +454,99 @@ namespace RockWeb.Blocks.Administration
 
 		protected void ShowEditType( int typeId )
 		{
-			
-			
+			var typeModel = new Rock.Core.DefinedTypeService().Get( typeId );
+
+			if ( typeModel != null )
+			{
+				var type = Rock.Web.Cache.DefinedTypeCache.Read( typeModel );
+				lType.Text = "Editing Defined Type";
+				hfIdType.Value = typeId.ToString();
+				tbTypeName.Text = type.Name;
+				tbTypeCategory.Text = type.Category;
+				tbTypeDescription.Text = type.Description;
+				if ( type.FieldTypeId != null )
+				{
+					ddlTypeFieldType.SelectedValue = type.FieldTypeId.ToString();
+				}
+				
+			}
+			else
+			{
+				lType.Text = "Adding Defined Type";
+				hfIdType.Value = string.Empty;
+				tbTypeName.Text = string.Empty;
+				tbTypeCategory.Text = string.Empty;
+				tbTypeDescription.Text = string.Empty;
+			}
+						
 			pnlTypes.Visible = false;
 			pnlTypeDetails.Visible = true;
 		}
 
 		protected void ShowEditAttribute( int attributeId )
-		{ 
+		{
+			var attributeModel = new Rock.Core.AttributeService().Get( attributeId );
+
+			if ( attributeModel != null )
+			{
+				var attribute = Rock.Web.Cache.AttributeCache.Read( attributeModel );
+				hfIdAttribute.Value = attributeId.ToString();
+				tbAttributeKey.Text = attribute.Key;
+				tbAttributeName.Text = attribute.Name;
+				tbAttributeCategory.Text = attribute.Category;
+				tbAttributeDescription.Text = attribute.Description;
+				tbAttributeDefaultValue.Text = attribute.DefaultValue;
+				cbAttributeGridColumn.Checked = attribute.IsGridColumn;
+				cbAttributeRequired.Checked = attribute.IsRequired;
+				if (attribute.FieldTypeId != null)
+				{
+					ddlAttributeFieldType.SelectedValue = attribute.FieldTypeId.ToString();
+				}
+
+			}
+			else
+			{
+				hfIdAttribute.Value = string.Empty;
+				tbAttributeKey.Text = string.Empty;
+				tbAttributeName.Text = string.Empty;
+				tbAttributeCategory.Text = string.Empty;
+				tbAttributeDescription.Text = string.Empty;
+				tbAttributeDefaultValue.Text = string.Empty;				
+			}
+
+			pnlAttributes.Visible = false;
+			modalAttributes.Show();
 		}
 
 		protected void ShowEditValue( int valueId )
 		{
+			var valueModel = new Rock.Core.DefinedValueService().Get( valueId );
+
+			if ( valueModel != null )
+			{
+				var value = Rock.Web.Cache.DefinedValueCache.Read( valueModel );
+				var gridAttributes = attributeService
+					.GetAttributesByEntityQualifier( _entityType, _entityQualifier, hfIdType.Value)
+					.Where( attr => attr.IsGridColumn );
+				
+				hfIdValue.Value = valueId.ToString();
+				tbValueName.Text = value.Name;
+				tbValueDescription.Text = value.Description;
+				tbValueGridColumn.Text = string.Join( ",",gridAttributes.AsEnumerable()
+					.Select( attr => attr.Name )
+			);
+			}
+			else
+			{
+				hfIdValue.Value = string.Empty;
+
+				tbValueName.Text = string.Empty;
+				tbValueDescription.Text = string.Empty;
+				tbValueGridColumn.Text = string.Empty;				
+			}
+
+			pnlValues.Visible = false;
+			modalValues.Show();
 		}
         
         private void DisplayError( string message )

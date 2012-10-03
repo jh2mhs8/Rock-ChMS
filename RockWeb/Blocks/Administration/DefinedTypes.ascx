@@ -29,7 +29,7 @@
                 <asp:BoundField DataField="Id" HeaderText="ID" SortExpression="Id"/>
                 <asp:BoundField DataField="Category" HeaderText="Category" SortExpression="Category" />
                 <asp:TemplateField HeaderText="Name" ShowHeader="true"><ItemTemplate>
-                    <asp:LinkButton ID="LinkButton1" runat="server" Text='<%#Eval("Name") %>' OnCommand="rGridType_EditValue" />  </ItemTemplate>
+                    <asp:LinkButton ID="btnEditValue" runat="server" Text='<%#Eval("Name") %>' CommandName="ID" CommandArgument='<%#Eval("ID") %>' OnCommand="rGridType_EditValue" />  </ItemTemplate>
                 </asp:TemplateField>
                  <%--<asp:BoundField DataField="Name" HeaderText="Name" SortExpression="Name" />                --%>
                 <asp:BoundField DataField="Description" HeaderText="Description" SortExpression="Description" />
