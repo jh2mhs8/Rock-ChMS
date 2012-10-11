@@ -6,14 +6,16 @@
 
 using System;
 using System.Linq;
-using System.IO;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
-using System.Web.Services;
+using System.Collections.Generic;
+//using System.Web.Services;
+//using System.IO;
+//using Rock.Field;
 
+using Rock;
 using Rock.Core;
-using Rock.Field;
 using Rock.Web.UI.Controls;
 
 namespace RockWeb.Blocks.Administration
@@ -159,7 +161,8 @@ namespace RockWeb.Blocks.Administration
 		{
 			using ( new Rock.Data.UnitOfWorkScope() )
 			{
-				attributeService = new AttributeService();
+				var attributeService = new Rock.Core.AttributeService();
+				var attributeQualifierService = new Rock.Core.AttributeQualifierService();
 
 				Rock.Core.Attribute attribute;
 
@@ -170,6 +173,8 @@ namespace RockWeb.Blocks.Administration
 					attribute.IsSystem = false;
 					attribute.Entity = _entityType;
 					attribute.EntityQualifierColumn = _entityQualifier;
+					attribute.EntityQualifierValue = hfIdType.Value;
+					attributeService.Add( attribute, CurrentPersonId );					
 				}
 				else
 				{
@@ -185,15 +190,14 @@ namespace RockWeb.Blocks.Administration
 				attribute.DefaultValue = tbAttributeDefaultValue.Text;
 				attribute.IsGridColumn = cbAttributeGridColumn.Checked;
 				attribute.IsRequired = cbAttributeRequired.Checked;
-				attribute.EntityQualifierValue = hfIdType.Value;
 
-				attributeService.Save( attribute, CurrentPersonId );
+				attributeService.Save( attribute, CurrentPersonId );				
 			}
 
 			rGridAttribute_Bind( hfIdType.Value );
 
 			modalAttributes.Hide();
-			pnlAttributes.Visible = true;
+			//pnlAttributes.Visible = true;
 		}
 
 		protected void btnCloseAttribute_Click( object sender, EventArgs e )
@@ -214,7 +218,9 @@ namespace RockWeb.Blocks.Administration
 				if ( valueId == 0 )
 				{
 					definedValue = new Rock.Core.DefinedValue();
-					definedValue.IsSystem = false;					
+					definedValue.IsSystem = false;
+					definedValue.DefinedTypeId = Int32.Parse( hfIdType.Value );
+					valueService.Add( definedValue, CurrentPersonId );	
 				}
 				else
 				{
@@ -223,8 +229,7 @@ namespace RockWeb.Blocks.Administration
 				}
 
 				definedValue.Name = tbValueName.Text;
-				definedValue.Description = tbValueDescription.Text;
-				definedValue.DefinedTypeId = Int32.Parse( hfIdType.Value );
+				definedValue.Description = tbValueDescription.Text;				
 				
 				valueService.Save( definedValue, CurrentPersonId );
 			}
@@ -316,7 +321,6 @@ namespace RockWeb.Blocks.Administration
 		protected void rGridAttribute_Add( object sender, EventArgs e )
 		{
 			ShowEditAttribute( 0 );
-			modalAttributes.Show();
 		}		
 
 		protected void rGridAttribute_Edit( object sender, RowEventArgs e )
@@ -346,7 +350,6 @@ namespace RockWeb.Blocks.Administration
         protected void rGridValue_Add( object sender, EventArgs e )
 		{
 			ShowEditValue( 0 );
-			modalValues.Show();
 		}
 
 		protected void rGridValue_Edit( object sender, RowEventArgs e )
@@ -398,57 +401,62 @@ namespace RockWeb.Blocks.Administration
 
 		private void rGridType_Bind()
         {
-            var queryable = typeService.Queryable().
-                Where( a => a.Category != "" && a.Category != null );
+			var queryable = new Rock.Core.DefinedTypeService().Queryable().
+				Where( a => a.Category != "" && a.Category != null );
+			
+			if ( ddlCategoryFilter.SelectedValue != "[All]" )
+				queryable = queryable.
+					Where( a => a.Category == ddlCategoryFilter.SelectedValue );
 
-            if ( ddlCategoryFilter.SelectedValue != "[All]" )
-                queryable = queryable.
-                    Where( a => a.Category == ddlCategoryFilter.SelectedValue );
+			SortProperty sortProperty = rGridType.SortProperty;
+			if ( sortProperty != null )
+				queryable = queryable.
+					Sort( sortProperty );
+			else
+				queryable = queryable.
+					OrderBy( a => a.Category );
 
-            rGridType.DataSource = queryable.
-                OrderBy( a => a.Category).
-                ToList();
-
-            rGridType.DataBind();            
+			rGridType.DataSource = queryable.ToList();
+			rGridType.DataBind();			
         }
 
 		protected void rGridValue_Bind( string typeId )
 		{
 			int definedTypeId = Int32.Parse( typeId );
-						
-			var gridAttributes = attributeService
-				.GetAttributesByEntityQualifier( typeof( Rock.Core.DefinedValue).ToString()
-					, _entityQualifier
-					, typeId )
-				.Where( attr => attr.IsGridColumn );
-
-			tbValueGridColumn.Text = string.Join(",",
-				gridAttributes.AsEnumerable()
-				.Select( attr => attr.Name )
-			);
 			
-			var queryable = valueService.Queryable().
+			var queryable = new Rock.Core.DefinedValueService().Queryable().
 				Where( a => a.DefinedTypeId == definedTypeId );
 
-            rGridValue.DataSource = queryable.
-				OrderBy( a => a.Order).
-				ToList();
+			SortProperty sortProperty = rGridValue.SortProperty;
+			if ( sortProperty != null )
+				queryable = queryable.
+					Sort( sortProperty );
+			else
+				queryable = queryable.
+					OrderBy( a => a.Id);
+
+            rGridValue.DataSource = queryable.ToList();
 
 			rGridValue.DataBind();
 		}
 
 		protected void rGridAttribute_Bind( string typeId )
         {
-            var queryable = attributeService.Queryable().
+            var queryable = new Rock.Core.AttributeService().Queryable().
 				Where( a => a.Entity == _entityType &&
 				( a.EntityQualifierColumn ?? string.Empty ) == _entityQualifier &&
 				( a.EntityQualifierValue ?? string.Empty ) == typeId );
 
-            rGridAttribute.DataSource = queryable.
-                OrderBy( a => a.Category ).
-                ThenBy( a => a.Key ).
-                ToList();
+			SortProperty sortProperty = rGridAttribute.SortProperty;
+			if ( sortProperty != null )
+				queryable = queryable.
+					Sort( sortProperty );
+            else 
+				queryable = queryable.
+				OrderBy( a => a.Category ).
+                ThenBy( a => a.Key );
 
+			rGridAttribute.DataSource = queryable.ToList();
             rGridAttribute.DataBind();
         }
 
@@ -464,11 +472,10 @@ namespace RockWeb.Blocks.Administration
 				tbTypeName.Text = type.Name;
 				tbTypeCategory.Text = type.Category;
 				tbTypeDescription.Text = type.Description;
-				if ( type.FieldTypeId != null )
+				if ( type.FieldType.Id != null )
 				{
-					ddlTypeFieldType.SelectedValue = type.FieldTypeId.ToString();
-				}
-				
+					ddlTypeFieldType.SelectedValue = type.FieldType.Id.ToString();
+				}				
 			}
 			else
 			{
@@ -498,11 +505,10 @@ namespace RockWeb.Blocks.Administration
 				tbAttributeDefaultValue.Text = attribute.DefaultValue;
 				cbAttributeGridColumn.Checked = attribute.IsGridColumn;
 				cbAttributeRequired.Checked = attribute.IsRequired;
-				if (attribute.FieldTypeId != null)
+				if ( attribute.FieldType.Id != null )
 				{
-					ddlAttributeFieldType.SelectedValue = attribute.FieldTypeId.ToString();
+					ddlAttributeFieldType.SelectedValue = attribute.FieldType.Id.ToString();
 				}
-
 			}
 			else
 			{
@@ -514,7 +520,6 @@ namespace RockWeb.Blocks.Administration
 				tbAttributeDefaultValue.Text = string.Empty;				
 			}
 
-			pnlAttributes.Visible = false;
 			modalAttributes.Show();
 		}
 
@@ -534,7 +539,7 @@ namespace RockWeb.Blocks.Administration
 				tbValueDescription.Text = value.Description;
 				tbValueGridColumn.Text = string.Join( ",",gridAttributes.AsEnumerable()
 					.Select( attr => attr.Name )
-			);
+				);
 			}
 			else
 			{
@@ -545,7 +550,6 @@ namespace RockWeb.Blocks.Administration
 				tbValueGridColumn.Text = string.Empty;				
 			}
 
-			pnlValues.Visible = false;
 			modalValues.Show();
 		}
         

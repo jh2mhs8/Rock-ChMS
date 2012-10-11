@@ -260,8 +260,6 @@
     <Compile Include="Field\Types\Url.cs" />
     <Compile Include="Field\Types\Currency.cs" />
     <Compile Include="Field\Types\Decimal.cs" />
-    <Compile Include="Field\Types\DefinedValue.cs" />
-    <Compile Include="Field\Types\DefinedType.cs" />
     <Compile Include="Field\Types\Date.cs" />
     <Compile Include="Field\Types\Image.cs" />
     <Compile Include="Field\Types\Video.cs" />

@@ -1,15 +1,5 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="DefinedTypes.ascx.cs" Inherits="RockWeb.Blocks.Administration.DefinedTypes" %>
 
-<script type="text/javascript">
-
-    var type = null;
-    var attribute = null;
-    var value = null;
-
-    
-
-</script>
-
 <asp:UpdatePanel ID="upSettings" runat="server">
 <ContentTemplate>
 
@@ -28,13 +18,14 @@
             <Columns>
                 <asp:BoundField DataField="Id" HeaderText="ID" SortExpression="Id"/>
                 <asp:BoundField DataField="Category" HeaderText="Category" SortExpression="Category" />
-                <asp:TemplateField HeaderText="Name" ShowHeader="true"><ItemTemplate>
-                    <asp:LinkButton ID="btnEditValue" runat="server" Text='<%#Eval("Name") %>' CommandName="ID" CommandArgument='<%#Eval("ID") %>' OnCommand="rGridType_EditValue" />  </ItemTemplate>
+                <asp:TemplateField HeaderText="Name" ShowHeader="true" SortExpression="Name"><ItemTemplate>
+                    <asp:LinkButton ID="btnEditValue" runat="server" Text='<%#Eval("Name") %>' 
+                        CommandName="ID" CommandArgument='<%#Eval("ID") %>' OnCommand="rGridType_EditValue" />  </ItemTemplate>
                 </asp:TemplateField>
-                 <%--<asp:BoundField DataField="Name" HeaderText="Name" SortExpression="Name" />                --%>
                 <asp:BoundField DataField="Description" HeaderText="Description" SortExpression="Description" />
+                <asp:BoundField DataField="FieldType.Name" HeaderText="Field Type" SortExpression="FieldType.Name"/>
                 <Rock:EditField OnClick="rGridType_Edit" />
-                <Rock:EditValueField OnClick="rGridType_EditAttribute" />
+                <Rock:EditValueField OnClick="rGridType_EditAttribute"  />
                 <Rock:DeleteField OnClick="rGridType_Delete" />
             </Columns>
         </Rock:Grid>          
@@ -80,8 +71,8 @@
                 <asp:BoundField DataField="Category" HeaderText="Category" SortExpression="Category" />
                 <asp:BoundField DataField="Name" HeaderText="Name" SortExpression="Name"/>
                 <asp:BoundField DataField="Description" HeaderText="Description" SortExpression="Description"/>
-                <Rock:BoolField DataField="GridColumn" HeaderText="Grid Column" SortExpression="GridColumn"/>
-                <Rock:BoolField DataField="Required" HeaderText="Required" SortExpression="Required"/>
+                <Rock:BoolField DataField="IsGridColumn" HeaderText="Grid Column" SortExpression="IsGridColumn"/>
+                <Rock:BoolField DataField="IsRequired" HeaderText="Required" SortExpression="IsRequired"/>
                 <Rock:EditField OnClick="rGridAttribute_Edit" />
                 <Rock:DeleteField OnClick="rGridAttribute_Delete" />
 
