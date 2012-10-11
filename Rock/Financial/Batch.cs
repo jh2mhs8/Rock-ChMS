@@ -18,7 +18,7 @@ namespace Rock.Financial
     /// Batch POCO class.
     /// </summary>
     [Table("financialBatch")]
-    public partial class Batch : ModelWithAttributes<Batch>, IAuditable
+    public partial class Batch : Model<Batch>
     {
         /// <summary>
         /// Gets or sets the name.
@@ -97,55 +97,30 @@ namespace Rock.Financial
         public virtual ICollection<Transaction> Transactions { get; set; }
 
         /// <summary>
-        /// Gets or sets the modified date time.
+        /// Static Method to return an object based on the id
         /// </summary>
-        /// <value>
-        /// The modified date time.
-        /// </value>
-        [DataMember]
-        public DateTime? ModifiedDateTime { get; set; }
-
-        /// <summary>
-        /// Gets or sets the created date time.
-        /// </summary>
-        /// <value>
-        /// The created date time.
-        /// </value>
-        [DataMember]
-        public DateTime? CreatedDateTime { get; set; }
-
-        /// <summary>
-        /// Gets or sets the created by person id.
-        /// </summary>
-        /// <value>
-        /// The created by person id.
-        /// </value>
-        [DataMember]
-        public int? CreatedByPersonId { get; set; }
-
-        /// <summary>
-        /// Gets or sets the modified by person id.
-        /// </summary>
-        /// <value>
-        /// The modified by person id.
-        /// </value>
-        [DataMember]
-        public int? ModifiedByPersonId { get; set; }
-
-		/// <summary>
-		/// Static Method to return an object based on the id
-		/// </summary>
-		/// <param name="id">The id.</param>
-		/// <returns></returns>
-		public static Batch Read( int id )
-		{
-			return Read<Batch>( id );
-		}
+        /// <param name="id">The id.</param>
+        /// <returns></returns>
+        public static Batch Read( int id )
+        {
+            return Read<Batch>( id );
+        }
 
         /// <summary>
         /// Gets the auth entity.
         /// </summary>
-        public override string AuthEntity { get { return "Financial.Batch"; } }
+        public override string EntityTypeName { get { return "Financial.Batch"; } }
+
+        /// <summary>
+        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
+        public override string ToString()
+        {
+            return this.Name;
+        }
     }
 
     /// <summary>

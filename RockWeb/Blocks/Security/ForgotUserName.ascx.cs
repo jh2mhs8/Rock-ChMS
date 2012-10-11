@@ -6,27 +6,22 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Web;
 using System.Web.UI;
-using System.Web.UI.WebControls;
 
-using Rock.Communication;
 using Rock.Cms;
+using Rock.Communication;
 using Rock.Crm;
 using Rock.Web.Cache;
+using Rock.Web.UI;
 
 namespace RockWeb.Blocks.Security
 {
-    [Rock.Attribute.Property( 0, "Heading", "HeadingCaption", "Captions", "", false,
-        "Enter your email address below and we'll send you your account user name" )]
-    [Rock.Attribute.Property( 1, "Invalid Email", "InvalidEmailCaption", "Captions", "", false,
-        "There are not any accounts for the email address you entered" )]
-    [Rock.Attribute.Property( 2, "Success", "SuccessCaption", "Captions", "", false,
-        "Your user name has been sent to the email address you entered" )]
-    public partial class ForgotUserName : Rock.Web.UI.Block
+    [BlockProperty( 0, "Heading", "HeadingCaption", "Captions", "", false,"Enter your email address below and we'll send you your account user name" )]
+    [BlockProperty( 1, "Invalid Email", "InvalidEmailCaption", "Captions", "", false,"There are not any accounts for the email address you entered" )]
+    [BlockProperty( 2, "Success", "SuccessCaption", "Captions", "", false,"Your user name has been sent to the email address you entered" )]
+    public partial class ForgotUserName : Rock.Web.UI.RockBlock
     {
-        #region Overridden Page Methods
+        #region Overridden RockPage Methods
 
         protected override void OnLoad( EventArgs e )
         {
@@ -66,7 +61,7 @@ namespace RockWeb.Blocks.Security
 
                 UserService userService = new UserService();
                 foreach ( User user in userService.GetByPersonId( person.Id ) )
-                    if ( user.AuthenticationType != AuthenticationType.Facebook )
+                    if ( user.ServiceType == AuthenticationServiceType.Internal )
                         userObjects.Add( user );
 
                 if ( userObjects.Count > 0 )

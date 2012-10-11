@@ -8,6 +8,7 @@ using System.ComponentModel;
 using System.ComponentModel.Composition;
 
 using Rock.MelissaData.AddressCheck;
+using Rock.Web.UI;
 
 namespace Rock.Address.Standardize
 {
@@ -17,13 +18,13 @@ namespace Rock.Address.Standardize
     [Description( "Address Standardization service from Melissa Data" )]
     [Export( typeof( StandardizeComponent ) )]
     [ExportMetadata( "ComponentName", "MelissaData" )]
-    [Rock.Attribute.Property( 1, "Customer Id", "Security", "The Melissa Data Customer ID", true, "" )]
+    [BlockProperty( 1, "Customer Id", "Security", "The Melissa Data Customer ID", true, "" )]
     public class MelissaData : StandardizeComponent
     {
         /// <summary>
         /// Standardizes the address
         /// </summary>
-		/// <param name="location">The location.</param>
+        /// <param name="location">The location.</param>
         /// <param name="result">The AddressCheck result code</param>
         /// <returns>
         /// True/False value of whether the address was standardized succesfully

@@ -17,7 +17,7 @@ using Rock.Web.UI.Controls;
 
 namespace RockWeb.Blocks.Administration
 {
-    public partial class PageProperties : Rock.Web.UI.Block
+    public partial class PageProperties : Rock.Web.UI.RockBlock
     {
         #region Fields
 
@@ -61,12 +61,12 @@ namespace RockWeb.Blocks.Administration
                     List<string> blockContexts = new List<string>();
                     foreach ( var block in _page.Blocks )
                     {
-                        var blockControl = TemplateControl.LoadControl( block.BlockType.Path ) as Rock.Web.UI.Block;
+                        var blockControl = TemplateControl.LoadControl( block.BlockType.Path ) as Rock.Web.UI.RockBlock;
                         if ( blockControl != null )
                         {
                             blockControl.CurrentPage = _page;
                             blockControl.CurrentBlock = block;
-                            foreach ( var context in blockControl.RequiredContext )
+                            foreach ( var context in blockControl.ContextTypesRequired )
                                 if ( !blockContexts.Contains( context ) )
                                     blockContexts.Add( context );
                         }
@@ -246,7 +246,7 @@ namespace RockWeb.Blocks.Administration
                 AddPage( page, 1 );
 
             ddlLayout.Items.Clear();
-            DirectoryInfo di = new DirectoryInfo( Path.Combine( this.Page.Request.MapPath( this.ThemePath ), "Layouts" ) );
+            DirectoryInfo di = new DirectoryInfo( Path.Combine( this.Page.Request.MapPath( this.CurrentTheme ), "Layouts" ) );
             foreach ( FileInfo fi in di.GetFiles( "*.aspx" ) )
                 ddlLayout.Items.Add( new ListItem( fi.Name.Remove( fi.Name.IndexOf( ".aspx" ) ) ) );
 

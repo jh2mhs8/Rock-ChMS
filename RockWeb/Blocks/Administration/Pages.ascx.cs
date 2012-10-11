@@ -14,8 +14,8 @@ using Rock.Web.UI.Controls;
 
 namespace RockWeb.Blocks.Administration
 {
-    public partial class Pages : Rock.Web.UI.Block
-	{
+    public partial class Pages : Rock.Web.UI.RockBlock
+    {
         #region Fields
 
         private bool canConfigure = false;
@@ -45,16 +45,6 @@ namespace RockWeb.Blocks.Administration
                     rGrid.Actions.AddClick += rGrid_GridAdd;
                     rGrid.GridReorder += new GridReorderEventHandler( rGrid_GridReorder );
                     rGrid.GridRebind += new GridRebindEventHandler( rGrid_GridRebind );
-
-                    string script = string.Format( @"
-        Sys.Application.add_load(function () {{
-            $('td.grid-icon-cell.delete a').click(function(){{
-                return confirm('Are you sure you want to delete this page?');
-                }});
-        }});
-    ", rGrid.ClientID );
-
-                    this.Page.ClientScript.RegisterStartupScript( this.GetType(), string.Format( "grid-confirm-delete-{0}", rGrid.ClientID ), script, true );
                 }
                 else
                 {
@@ -214,7 +204,7 @@ namespace RockWeb.Blocks.Administration
         private void LoadLayouts()
         {
             ddlLayout.Items.Clear();
-            DirectoryInfo di = new DirectoryInfo( Path.Combine( this.Page.Request.MapPath( this.ThemePath ), "Layouts" ) );
+            DirectoryInfo di = new DirectoryInfo( Path.Combine( this.Page.Request.MapPath( this.CurrentTheme ), "Layouts" ) );
             foreach ( FileInfo fi in di.GetFiles( "*.aspx" ) )
                 ddlLayout.Items.Add( new ListItem( fi.Name.Remove( fi.Name.IndexOf( ".aspx" ) ) ) );
         }

@@ -8,24 +8,25 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web.UI;
-using System.Web.UI.WebControls;
 using System.Web.UI.HtmlControls;
+using System.Web.UI.WebControls;
 
 using Rock;
 using Rock.Cms;
+using Rock.Security;
+using Rock.Web.UI;
 
 namespace RockWeb.Blocks.Cms
 {
-    [Rock.Security.AdditionalActions( new string[] { "Approve" } )]
-    [Rock.Attribute.Property( 0, "Pre-Text", "PreText", "", "HTML text to render before the blocks main content.", false, "" )]
-    [Rock.Attribute.Property( 1, "Post-Text", "PostText", "", "HTML text to render after the blocks main content.", false, "" )]
-    [Rock.Attribute.Property( 2, "Cache Duration", "CacheDuration", "", "Number of seconds to cache the content.", false, "0", "Rock", "Rock.Field.Types.Integer" )]
-    [Rock.Attribute.Property( 3, "Context Parameter", "ContextParameter", "", "Query string parameter to use for 'personalizing' content based on unique values.", false, "" )]
-    [Rock.Attribute.Property( 4, "Context Name", "ContextName", "", "Name to use to further 'personalize' content.  Blocks with the same name, and referenced with the same context parameter will share html values.", false, "" )]
-    [Rock.Attribute.Property( 5, "Support Versions", "Advanced", "Support content versioning?", false, "False", "Rock", "Rock.Field.Types.Boolean" )]
-    [Rock.Attribute.Property( 6, "Require Approval", "Advanced", "Require that content be approved?", false, "False", "Rock", "Rock.Field.Types.Boolean" )]
-
-    public partial class HtmlContent : Rock.Web.UI.Block
+    [AdditionalActions( new string[] { "Approve" } )]
+    [BlockProperty( 0, "Pre-Text", "PreText", "", "HTML text to render before the blocks main content.", false, "" )]
+    [BlockProperty( 1, "Post-Text", "PostText", "", "HTML text to render after the blocks main content.", false, "" )]
+    [BlockProperty( 2, "Cache Duration", "CacheDuration", "", "Number of seconds to cache the content.", false, "0", "Rock", "Rock.Field.Types.Integer" )]
+    [BlockProperty( 3, "Context Parameter", "ContextParameter", "", "Query string parameter to use for 'personalizing' content based on unique values.", false, "" )]
+    [BlockProperty( 4, "Context Name", "ContextName", "", "Name to use to further 'personalize' content.  Blocks with the same name, and referenced with the same context parameter will share html values.", false, "" )]
+    [BlockProperty( 5, "Support Versions", "Advanced", "Support content versioning?", false, "False", "Rock", "Rock.Field.Types.Boolean" )]
+    [BlockProperty( 6, "Require Approval", "Advanced", "Require that content be approved?", false, "False", "Rock", "Rock.Field.Types.Boolean" )]
+    public partial class HtmlContent : Rock.Web.UI.RockBlock
     {
         #region Private Global Variables
 
@@ -55,7 +56,7 @@ namespace RockWeb.Blocks.Cms
             _supportVersioning = bool.Parse( AttributeValue( "SupportVersions" ) ?? "false" );
             _requireApproval = bool.Parse( AttributeValue( "RequireApproval" ) ?? "false" );
 
-            mpeContent.OnOkScript = string.Format("saveHtmlContent_{0}();", CurrentBlock.Id);
+            mpeContent.OnOkScript = string.Format( "saveHtmlContent_{0}();", CurrentBlock.Id );
 
             rGrid.DataKeyNames = new string[] { "id" };
             rGrid.ShowActionRow = false;
@@ -162,7 +163,7 @@ namespace RockWeb.Blocks.Cms
                         int? maxVersion = service.Queryable().
                             Where( c => c.BlockId == CurrentBlock.Id &&
                                 c.EntityValue == entityValue ).
-                            Select( c => ( int? )c.Version ).Max();
+                            Select( c => (int?)c.Version ).Max();
 
                         content.Version = maxVersion.HasValue ? maxVersion.Value + 1 : 1;
                     }
@@ -278,22 +279,38 @@ namespace RockWeb.Blocks.Cms
             var HtmlService = new HtmlContentService();
             var content = HtmlService.GetContent( CurrentBlock.Id, EntityValue() );
 
-			var personService = new Rock.Crm.PersonService();
-			var modifiedPersons = new Dictionary<int, string>();
-			foreach ( var personId in content.Where( c => c.ModifiedByPersonId.HasValue ).Select( c => c.ModifiedByPersonId ).Distinct() )
-			{
-				var modifiedPerson = personService.Get( personId.Value, true );
-				modifiedPersons.Add( personId.Value, modifiedPerson != null ? modifiedPerson.FullName : string.Empty );
-			}
+            var personService = new Rock.Crm.PersonService();
+            var versionAudits = new Dictionary<int, Rock.Core.Audit>();
+            var modifiedPersons = new Dictionary<int, string>();
 
-			var versions = content.
+            foreach ( var version in content )
+            {
+                var lastAudit = HtmlService.Audits( version )
+                    .Where( a => a.AuditType == Rock.Core.AuditType.Add ||
+                        a.AuditType == Rock.Core.AuditType.Modify )
+                    .OrderByDescending( h => h.DateTime )
+                    .FirstOrDefault();
+                if ( lastAudit != null )
+                    versionAudits.Add( version.Id, lastAudit );
+            }
+
+            foreach ( var audit in versionAudits.Values )
+            {
+                if ( audit.PersonId.HasValue && !modifiedPersons.ContainsKey( audit.PersonId.Value ) )
+                {
+                    var modifiedPerson = personService.Get( audit.PersonId.Value, true );
+                    modifiedPersons.Add( audit.PersonId.Value, modifiedPerson != null ? modifiedPerson.FullName : string.Empty );
+                }
+            }
+
+            var versions = content.
                 Select( v => new
                 {
                     v.Id,
                     v.Version,
                     v.Content,
-                    ModifiedDateTime = v.ModifiedDateTime.ToElapsedString(),
-					ModifiedByPerson = v.ModifiedByPersonId.HasValue ? modifiedPersons[v.ModifiedByPersonId.Value] : string.Empty,
+                    ModifiedDateTime = versionAudits.ContainsKey( v.Id ) ? versionAudits[v.Id].DateTime.ToElapsedString() : string.Empty,
+                    ModifiedByPerson = versionAudits.ContainsKey( v.Id ) && versionAudits[v.Id].PersonId.HasValue ? modifiedPersons[versionAudits[v.Id].PersonId.Value] : string.Empty,
                     Approved = v.IsApproved,
                     ApprovedByPerson = v.ApprovedByPerson != null ? v.ApprovedByPerson.FullName : "",
                     v.StartDateTime,

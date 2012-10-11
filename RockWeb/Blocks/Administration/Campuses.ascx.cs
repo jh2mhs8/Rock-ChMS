@@ -8,24 +8,28 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Web.UI.WebControls;
-
 using Rock;
+using Rock.Crm;
+using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 
 namespace RockWeb.Blocks.Administration
 {
-    public partial class Campuses : Rock.Web.UI.Block
+    /// <summary>
+    /// 
+    /// </summary>
+    public partial class Campuses : RockBlock
     {
-        #region Fields
-        
-        Rock.Crm.CampusService campusService = new Rock.Crm.CampusService();
-        
-        #endregion
-
         #region Control Methods
 
+        /// <summary>
+        /// Raises the <see cref="E:System.Web.UI.Control.Init" /> event.
+        /// </summary>
+        /// <param name="e">An <see cref="T:System.EventArgs" /> object that contains the event data.</param>
         protected override void OnInit( EventArgs e )
         {
+            base.OnInit( e );
+
             if ( CurrentPage.IsAuthorized( "Configure", CurrentPerson ) )
             {
                 gCampuses.DataKeyNames = new string[] { "id" };
@@ -33,28 +37,22 @@ namespace RockWeb.Blocks.Administration
                 gCampuses.Actions.AddClick += gCampuses_Add;
                 gCampuses.GridRebind += gCampuses_GridRebind;
             }
-
-            string script = @"
-        Sys.Application.add_load(function () {
-            $('td.grid-icon-cell.delete a').click(function(){
-                return confirm('Are you sure you want to delete this campus?');
-                });
-        });
-    ";
-            this.Page.ClientScript.RegisterStartupScript( this.GetType(), string.Format( "grid-confirm-delete-{0}", gCampuses.ClientID ), script, true );
-
-            base.OnInit( e );
         }
 
+        /// <summary>
+        /// Raises the <see cref="E:System.Web.UI.Control.Load" /> event.
+        /// </summary>
+        /// <param name="e">The <see cref="T:System.EventArgs" /> object that contains the event data.</param>
         protected override void OnLoad( EventArgs e )
-
         {
             nbMessage.Visible = false;
 
             if ( CurrentPage.IsAuthorized( "Configure", CurrentPerson ) )
             {
                 if ( !Page.IsPostBack )
+                {
                     BindGrid();
+                }
             }
             else
             {
@@ -70,14 +68,35 @@ namespace RockWeb.Blocks.Administration
 
         #region Grid Events
 
-        protected void gCampuses_Edit( object sender, RowEventArgs e )
+        /// <summary>
+        /// Handles the Add event of the gCampuses control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs" /> instance containing the event data.</param>
+        protected void gCampuses_Add( object sender, EventArgs e )
         {
-            ShowEdit( ( int )gCampuses.DataKeys[e.RowIndex]["id"] );
+            ShowEdit( 0 );
         }
 
+        /// <summary>
+        /// Handles the Edit event of the gCampuses control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="RowEventArgs" /> instance containing the event data.</param>
+        protected void gCampuses_Edit( object sender, RowEventArgs e )
+        {
+            ShowEdit( (int)gCampuses.DataKeys[e.RowIndex]["id"] );
+        }
+
+        /// <summary>
+        /// Handles the Delete event of the gCampuses control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="RowEventArgs" /> instance containing the event data.</param>
         protected void gCampuses_Delete( object sender, RowEventArgs e )
         {
-            Rock.Crm.Campus campus = campusService.Get( ( int )gCampuses.DataKeys[e.RowIndex]["id"] );
+            CampusService campusService = new CampusService();
+            Campus campus = campusService.Get( (int)gCampuses.DataKeys[e.RowIndex]["id"] );
             if ( CurrentBlock != null )
             {
                 campusService.Delete( campus, CurrentPersonId );
@@ -87,12 +106,12 @@ namespace RockWeb.Blocks.Administration
             BindGrid();
         }
 
-        void gCampuses_Add( object sender, EventArgs e )
-        {
-            ShowEdit( 0 );
-        }
-
-        void gCampuses_GridRebind( object sender, EventArgs e )
+        /// <summary>
+        /// Handles the GridRebind event of the gCampuses control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs" /> instance containing the event data.</param>
+        protected void gCampuses_GridRebind( object sender, EventArgs e )
         {
             BindGrid();
         }
@@ -101,23 +120,36 @@ namespace RockWeb.Blocks.Administration
 
         #region Edit Events
 
+        /// <summary>
+        /// Handles the Click event of the btnCancel control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs" /> instance containing the event data.</param>
         protected void btnCancel_Click( object sender, EventArgs e )
         {
             pnlDetails.Visible = false;
             pnlList.Visible = true;
         }
 
+        /// <summary>
+        /// Handles the Click event of the btnSave control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs" /> instance containing the event data.</param>
         protected void btnSave_Click( object sender, EventArgs e )
         {
-            Rock.Crm.Campus campus;
+            Campus campus;
+            CampusService campusService = new CampusService();
 
             int campusId = 0;
-            if ( !Int32.TryParse( hfCampusId.Value, out campusId ) )
+            if ( !int.TryParse( hfCampusId.Value, out campusId ) )
+            {
                 campusId = 0;
+            }
 
             if ( campusId == 0 )
             {
-                campus = new Rock.Crm.Campus();
+                campus = new Campus();
                 campusService.Add( campus, CurrentPersonId );
             }
             else
@@ -126,10 +158,23 @@ namespace RockWeb.Blocks.Administration
             }
 
             campus.Name = tbCampusName.Text;
+
+            // check for duplicates
+            if ( campusService.Queryable().Count( a => a.Name.Equals( campus.Name, StringComparison.OrdinalIgnoreCase ) && !a.Id.Equals( campus.Id ) ) > 0 )
+            {
+                nbMessage.Text = "This name is already being used on another campus.";
+                nbMessage.Visible = true;
+                return;
+            }
+
+            if ( !campus.IsValid )
+            {
+                // Controls will render the error messages
+                return;
+            }
+
             campusService.Save( campus, CurrentPersonId );
-
             BindGrid();
-
             pnlDetails.Visible = false;
             pnlList.Visible = true;
         }
@@ -138,34 +183,52 @@ namespace RockWeb.Blocks.Administration
 
         #region Internal Methods
 
+        /// <summary>
+        /// Binds the grid.
+        /// </summary>
         private void BindGrid()
         {
-            gCampuses.DataSource = campusService.Queryable().OrderBy( s => s.Name ).ToList();
+            CampusService campusService = new CampusService();
+            SortProperty sortProperty = gCampuses.SortProperty;
+
+            if ( sortProperty != null )
+            {
+                gCampuses.DataSource = campusService.Queryable().Sort( sortProperty ).ToList();
+            }
+            else
+            {
+                gCampuses.DataSource = campusService.Queryable().OrderBy( s => s.Name ).ToList();
+            }
+
             gCampuses.DataBind();
         }
 
+        /// <summary>
+        /// Shows the edit.
+        /// </summary>
+        /// <param name="campusId">The campus id.</param>
         protected void ShowEdit( int campusId )
         {
+            pnlList.Visible = false;
+            pnlDetails.Visible = true;
+            
+            CampusService campusService = new CampusService();
             Rock.Crm.Campus campus = campusService.Get( campusId );
 
             if ( campus != null )
             {
                 lAction.Text = "Edit";
                 hfCampusId.Value = campus.Id.ToString();
-
                 tbCampusName.Text = campus.Name;
             }
             else
             {
                 lAction.Text = "Add";
+                hfCampusId.Value = string.Empty;
                 tbCampusName.Text = string.Empty;
             }
-
-            pnlList.Visible = false;
-            pnlDetails.Visible = true;
         }
 
         #endregion
-
     }
 }

@@ -19,7 +19,7 @@ namespace Rock.Financial
     /// Fund POCO class.
     /// </summary>
     [Table("financialFund")]
-    public partial class Fund : ModelWithAttributes<Fund>, IAuditable
+    public partial class Fund : Model<Fund>
     {
         /// <summary>
         /// Gets or sets the name.
@@ -194,55 +194,30 @@ namespace Rock.Financial
         //public virtual ICollection<Transaction> Transactions { get; set; }
 
         /// <summary>
-        /// Gets or sets the modified date time.
+        /// Static Method to return an object based on the id
         /// </summary>
-        /// <value>
-        /// The modified date time.
-        /// </value>
-        [DataMember]
-        public DateTime? ModifiedDateTime { get; set; }
-
-        /// <summary>
-        /// Gets or sets the created date time.
-        /// </summary>
-        /// <value>
-        /// The created date time.
-        /// </value>
-        [DataMember]
-        public DateTime? CreatedDateTime { get; set; }
-
-        /// <summary>
-        /// Gets or sets the created by person id.
-        /// </summary>
-        /// <value>
-        /// The created by person id.
-        /// </value>
-        [DataMember]
-        public int? CreatedByPersonId { get; set; }
-
-        /// <summary>
-        /// Gets or sets the modified by person id.
-        /// </summary>
-        /// <value>
-        /// The modified by person id.
-        /// </value>
-        [DataMember]
-        public int? ModifiedByPersonId { get; set; }
-
-		/// <summary>
-		/// Static Method to return an object based on the id
-		/// </summary>
-		/// <param name="id">The id.</param>
-		/// <returns></returns>
-		public static Fund Read( int id )
-		{
-			return Read<Fund>( id );
-		}
+        /// <param name="id">The id.</param>
+        /// <returns></returns>
+        public static Fund Read( int id )
+        {
+            return Read<Fund>( id );
+        }
 
         /// <summary>
         /// Gets the auth entity.
         /// </summary>
-        public override string AuthEntity { get { return "Financial.Fund"; } }
+        public override string EntityTypeName { get { return "Financial.Fund"; } }
+
+        /// <summary>
+        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
+        public override string ToString()
+        {
+            return this.Name;
+        }
     }
 
     /// <summary>
