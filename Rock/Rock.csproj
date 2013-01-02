@@ -113,7 +113,7 @@
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Address\GeocodeContainer.cs">
+    <Compile Include="Communication\Address\GeocodeContainer.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Attribute\BooleanFieldAttribute.cs" />
@@ -369,17 +369,17 @@
     <Compile Include="Extension\IComponent.cs" />
     <Compile Include="Extension\IComponentData.cs" />
     <Compile Include="Extension\ContainerManaged.cs" />
-    <Compile Include="Address\Geocode\TeleAtlas.cs" />
+    <Compile Include="Communication\Address\Geocode\TeleAtlas.cs" />
     <Compile Include="Extension\ComponentDescription.cs" />
-    <Compile Include="Address\Standardize\MelissaData.cs" />
-    <Compile Include="Address\Standardize\StrikeIron.cs" />
-    <Compile Include="Address\StandardizeContainer.cs">
+    <Compile Include="Communication\Address\Standardize\MelissaData.cs" />
+    <Compile Include="Communication\Address\Standardize\StrikeIron.cs" />
+    <Compile Include="Communication\Address\StandardizeContainer.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Address\Geocode\StrikeIron.cs" />
-    <Compile Include="Address\StandardizeComponent.cs" />
-    <Compile Include="Address\GeocodeComponent.cs" />
-    <Compile Include="Address\Geocode\ServiceObjects.cs" />
+    <Compile Include="Communication\Address\Geocode\StrikeIron.cs" />
+    <Compile Include="Communication\Address\StandardizeComponent.cs" />
+    <Compile Include="Communication\Address\GeocodeComponent.cs" />
+    <Compile Include="Communication\Address\Geocode\ServiceObjects.cs" />
     <Compile Include="Model\Auth.cs" />
     <Compile Include="Model\BlockType.cs" />
     <Compile Include="Model\Block.cs" />
