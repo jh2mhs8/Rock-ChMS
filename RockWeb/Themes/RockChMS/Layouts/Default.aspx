@@ -1,61 +1,19 @@
 ﻿<%@ Page Title="" ValidateRequest="false" Language="C#" MasterPageFile="~/Themes/RockChMS/Layouts/Site.Master" 
-    AutoEventWireup="true" Inherits="Rock.Web.UI.Page" %>
+    AutoEventWireup="true" Inherits="Rock.Web.UI.RockPage" %>
 
 <asp:Content ID="ctMain" ContentPlaceHolderID="main" runat="server">
-
-    <script type="text/javascript">
-
-        Sys.Application.add_load(function () {
-            $('a.logo').attr('href', rock.baseUrl);
-        });
-
-    </script>
-
 
     <div id="page-frame">
         <header id="page-header" class="navbar navbar-fixed-top">
             <div class="container-fluid">
                 <div class="row-fluid">
                     <div class="span3">
-                        <a class="brand">Rock ChMS</a>
+                        <asp:HyperLink runat="server" CssClass="brand" NavigateUrl="~" Text="Rock ChMS" />
                     </div>
                     <div class="span9">
                         <div class="content pull-right">
-                                
                             <Rock:Zone ID="zHeader" Name="Header" runat="server" />
-                            <div class="filter-search">
-						        <input id="search-words">
-						        <div class="filter">
-                                    <dl class="dropdown">
-                                        <dt>Name</dt>
-                                        <dd>
-                                            <ul>
-                                                <li>Name</li>
-                                                <li>Email Address</li>
-                                                <li>Address</li>
-                                                <li>Phone</li>
-                                                <li>Group</li>
-                                            </ul>
-                                        </dd>
-                                    </dl>
-                                    <input type="hidden" name="hSearchFilter" value="Name" id="hSearchFilter" />
-                                </div>
-					        </div>
-                            <script>
-                                // show options when clicked
-                                $(".dropdown dt").click(function () {
-                                    $(".dropdown dd ul").fadeToggle('fast');
-                                });
-
-                                // change selection when picked
-                                $(".dropdown dd ul li").click(function () {
-                                    var text = $(this).html();
-                                    $(".dropdown dt").html(text);
-                                    $(".dropdown dd ul").hide();
-                                    $("#hSearchFilter").val(text);
-                                }); 
-                            </script>
-
+                            <Rock:SearchField ID="searchField" runat="server" />
                         </div>
                     </div>
                 </div>
@@ -83,22 +41,13 @@
         </div>
 
         <div class="container-fluid">
-            <section class="test">
-                <div class="row-fluid">
-                    <div class="span12">
-   
-    
-                            <Rock:Zone ID="ContentLeft" runat="server" />                       
-                                        <Rock:Zone ID="ContentRight" runat="server" />
-                                        <Rock:Zone ID="Content" runat="server" />
-                                        <Rock:Zone ID="UpperBand" runat="server" />
-                                        <Rock:Zone ID="LowerBand" runat="server" />
-                                        <Rock:Zone ID="LowerContentLeft" runat="server" />
-                                        <Rock:Zone ID="LowerContentRight" runat="server" />
-                                        <Rock:Zone ID="LowerContent" runat="server" />
-                    </div>    
-                </div>
-            </section>
+            <div class="row-fluid">
+                <div class="span12">
+
+                        <Rock:Zone ID="Content" runat="server" />
+
+                </div>    
+            </div>
         </div>
 
         <div id="page-footer" class="navbar">
@@ -155,7 +104,7 @@
                 $('#page-title').css('margin-top', 0);
             }
         }
-	</script>
+    </script>
             
 </asp:Content>
 

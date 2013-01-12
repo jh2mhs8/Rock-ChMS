@@ -45,11 +45,9 @@
 
     <div class="tabContent">
 
-        <p><asp:Literal ID="lActionNote" runat="server"></asp:Literal></p>
-
         <asp:PlaceHolder ID="phList" runat="server">
 
-            <Rock:Grid ID="rGrid" runat="server" AllowPaging="false" onrowdatabound="rGrid_RowDataBound">
+            <Rock:Grid ID="rGrid" runat="server" AllowPaging="false" RowItemText="role/user">
                 <Columns>
                     <Rock:ReorderField />
                     <asp:BoundField DataField="DisplayName" HeaderText="Name" HeaderStyle-HorizontalAlign="Left" ItemStyle-HorizontalAlign="Left" />
@@ -70,9 +68,24 @@
             </Rock:Grid>
 
             <asp:panel id="pnlActions" runat="server" CssClass="actions">
-                <asp:LinkButton ID="lbShowRole" runat="server" Text="Add Role" CssClass="btn primary" onclick="lbShowRole_Click"></asp:LinkButton>
-                <asp:LinkButton ID="lbShowUser" runat="server" Text="Add User" CssClass="btn primary" onclick="lbShowUser_Click"></asp:LinkButton>
+                <asp:LinkButton ID="lbShowRole" runat="server" Text="Add Role" CssClass="btn btn-primary" onclick="lbShowRole_Click"></asp:LinkButton>
+                <asp:LinkButton ID="lbShowUser" runat="server" Text="Add User" CssClass="btn btn-primary" onclick="lbShowUser_Click"></asp:LinkButton>
             </asp:panel>
+
+            <Rock:Grid ID="rGridParentRules" runat="server" AllowPaging="false" >
+                <Columns>
+                    <asp:BoundField DataField="DisplayName" HeaderText="Inherited Security" HeaderStyle-HorizontalAlign="Left" ItemStyle-HorizontalAlign="Left" />
+                    <asp:TemplateField>
+                        <HeaderTemplate>Allow or Deny</HeaderTemplate>
+                        <HeaderStyle HorizontalAlign="Left" />
+                        <ItemStyle Wrap="false" HorizontalAlign="Left" />
+                        <ItemTemplate>
+                            <%# Eval("AllowOrDeny").ToString() == "A" ? "Allow" : "Deny" %>
+                        </ItemTemplate>
+                    </asp:TemplateField>
+                    <asp:BoundField DataField="EntityTitle" HeaderText="From" HeaderStyle-HorizontalAlign="Left" ItemStyle-HorizontalAlign="Left" />
+                </Columns>
+            </Rock:Grid>
 
         </asp:PlaceHolder>
 
@@ -91,8 +104,8 @@
             </fieldset>
 
             <div class="actions">
-                <asp:LinkButton ID="lbAddRole" runat="server" Text="Add" CssClass="btn primary" onclick="lbAddRole_Click"></asp:LinkButton>
-                <asp:LinkButton ID="lbCancelAddRole" runat="server" Text="Cancel" CssClass="btn secondary" onclick="lbCancelAdd_Click"></asp:LinkButton>
+                <asp:LinkButton ID="lbAddRole" runat="server" Text="Add" CssClass="btn btn-primary" onclick="lbAddRole_Click"></asp:LinkButton>
+                <asp:LinkButton ID="lbCancelAddRole" runat="server" Text="Cancel" CssClass="btn" onclick="lbCancelAdd_Click"></asp:LinkButton>
             </div>
 
         </asp:Panel>
@@ -112,8 +125,8 @@
             </fieldset>
 
             <div class="actions">
-                <asp:LinkButton ID="lbAddUser" runat="server" Text="Add" CssClass="btn primary" OnClientClick="showAddUser(false);" onclick="lbAddUser_Click"></asp:LinkButton>
-                <asp:LinkButton ID="lbCancelAddUser" runat="server" Text="Cancel" CssClass="btn secondary" onclick="lbCancelAdd_Click"></asp:LinkButton>
+                <asp:LinkButton ID="lbAddUser" runat="server" Text="Add" CssClass="btn btn-primary" OnClientClick="showAddUser(false);" onclick="lbAddUser_Click"></asp:LinkButton>
+                <asp:LinkButton ID="lbCancelAddUser" runat="server" Text="Cancel" CssClass="btn" onclick="lbCancelAdd_Click"></asp:LinkButton>
             </div>
 
         </asp:Panel>

@@ -5,6 +5,7 @@
 //
 
 using System;
+using System.Reflection;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
@@ -17,6 +18,16 @@ namespace Rock.Web.UI.Controls
     public class DeleteField : TemplateField
     {
         /// <summary>
+        /// Initializes a new instance of the <see cref="DeleteField" /> class.
+        /// </summary>
+        public DeleteField()
+            : base()
+        {
+            this.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
+            this.ItemStyle.CssClass = "grid-icon-cell delete";
+        }
+
+        /// <summary>
         /// Performs basic instance initialization for a data control field.
         /// </summary>
         /// <param name="sortingEnabled">A value that indicates whether the control supports the sorting of columns of data.</param>
@@ -26,12 +37,10 @@ namespace Rock.Web.UI.Controls
         /// </returns>
         public override bool Initialize( bool sortingEnabled, Control control )
         {
-            this.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
-            this.ItemStyle.CssClass = "grid-icon-cell delete";
-
             DeleteFieldTemplate deleteFieldTemplate = new DeleteFieldTemplate();
             deleteFieldTemplate.LinkButtonClick += deleteFieldTemplate_LinkButtonClick;
             this.ItemTemplate = deleteFieldTemplate;
+            this.ParentGrid = control as Grid;
 
             return base.Initialize( sortingEnabled, control );
         }
@@ -41,10 +50,18 @@ namespace Rock.Web.UI.Controls
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
-        void deleteFieldTemplate_LinkButtonClick( object sender, RowEventArgs e )
+        protected void deleteFieldTemplate_LinkButtonClick( object sender, RowEventArgs e )
         {
             OnClick( e );
         }
+
+        /// <summary>
+        /// Gets the parent grid.
+        /// </summary>
+        /// <value>
+        /// The parent grid.
+        /// </value>
+        public Grid ParentGrid { get; internal set; }
 
         /// <summary>
         /// Occurs when [click].
@@ -58,7 +75,9 @@ namespace Rock.Web.UI.Controls
         public virtual void OnClick( RowEventArgs e )
         {
             if ( Click != null )
+            {
                 Click( this, e );
+            }
         }
     }
 
@@ -76,11 +95,76 @@ namespace Rock.Web.UI.Controls
             DataControlFieldCell cell = container as DataControlFieldCell;
             if ( cell != null )
             {
+                DeleteField deleteField = cell.ContainingField as DeleteField;
+                ParentGrid = deleteField.ParentGrid;
                 LinkButton lbDelete = new LinkButton();
-                lbDelete.Text = "Delete";
+                lbDelete.ToolTip = "Delete";
                 lbDelete.Click += lbDelete_Click;
+                lbDelete.DataBinding += lbDelete_DataBinding;
+                lbDelete.PreRender += lbDelete_PreRender;
 
                 cell.Controls.Add( lbDelete );
+            }
+        }
+
+        /// <summary>
+        /// Handles the PreRender event of the lbDelete control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs" /> instance containing the event data.</param>
+        /// <exception cref="System.NotImplementedException"></exception>
+        void lbDelete_PreRender( object sender, EventArgs e )
+        {
+            LinkButton lbDelete = sender as LinkButton;
+            if ( lbDelete.Enabled && ( !ParentGrid.Enabled || !ParentGrid.IsDeleteEnabled ) )
+            {
+                lbDelete.Enabled = false;
+            }
+            
+            if ( lbDelete.Enabled &&
+                ParentGrid.ShowConfirmDeleteDialog && 
+                ParentGrid.Enabled && 
+                ParentGrid.IsDeleteEnabled )
+            {
+                lbDelete.Attributes["onclick"] = string.Format( "javascript: return confirmDelete(event, '{0}');", ParentGrid.RowItemText );
+            }
+            else
+            {
+                lbDelete.Attributes.Remove( "onclick" );
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the parent grid.
+        /// </summary>
+        /// <value>
+        /// The parent grid.
+        /// </value>
+        private Grid ParentGrid { get; set; }
+
+        /// <summary>
+        /// Handles the DataBinding event of the lbDelete control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs" /> instance containing the event data.</param>
+        protected void lbDelete_DataBinding( object sender, EventArgs e )
+        {
+            if ( ParentGrid.HideDeleteButtonForIsSystem )
+            {
+                LinkButton lbDelete = sender as LinkButton;
+                GridViewRow dgi = lbDelete.NamingContainer as GridViewRow;
+                if ( dgi.DataItem != null )
+                {
+                    PropertyInfo pi = dgi.DataItem.GetType().GetProperty( "IsSystem" );
+                    if ( pi != null )
+                    {
+                        bool isSystem = (bool)pi.GetValue( dgi.DataItem );
+                        if ( isSystem )
+                        {
+                            lbDelete.Enabled = false;
+                        }
+                    }
+                }
             }
         }
 
@@ -89,12 +173,12 @@ namespace Rock.Web.UI.Controls
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="System.EventArgs"/> instance containing the event data.</param>
-        void lbDelete_Click( object sender, EventArgs e )
+        protected void lbDelete_Click( object sender, EventArgs e )
         {
             if ( LinkButtonClick != null )
             {
-                GridViewRow row = ( GridViewRow )( ( LinkButton )sender ).Parent.Parent;
-                RowEventArgs args = new RowEventArgs( row.RowIndex );
+                GridViewRow row = (GridViewRow)( (LinkButton)sender ).Parent.Parent;
+                RowEventArgs args = new RowEventArgs( row );
                 LinkButtonClick( sender, args );
             }
         }

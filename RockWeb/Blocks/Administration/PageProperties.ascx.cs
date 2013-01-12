@@ -17,13 +17,13 @@ using Rock.Web.UI.Controls;
 
 namespace RockWeb.Blocks.Administration
 {
-    public partial class PageProperties : Rock.Web.UI.Block
+    public partial class PageProperties : Rock.Web.UI.RockBlock
     {
         #region Fields
 
-        private Rock.Web.Cache.Page _page = null;
+        private Rock.Web.Cache.PageCache _page = null;
         private string _zoneName = string.Empty;
-        private List<string> tabs = new List<string> { "Basic Settings", "Menu Display", "Advanced Settings", "Page Routes" } ;
+        private List<string> tabs = new List<string> { "Basic Settings", "Menu Display", "Advanced Settings"} ;
         
         protected string CurrentProperty
         {
@@ -51,13 +51,42 @@ namespace RockWeb.Blocks.Administration
             try
             {
                 int pageId = Convert.ToInt32( PageParameter( "Page" ) );
-                _page = Rock.Web.Cache.Page.Read( pageId );
+                _page = Rock.Web.Cache.PageCache.Read( pageId );
 
-                if ( _page.Authorized( "Configure", CurrentUser ) )
+                if ( _page.IsAuthorized( "Administrate", CurrentPerson ) )
                 {
-                    var attributeControls = Rock.Attribute.Helper.GetEditControls( _page, !Page.IsPostBack );
-                    foreach ( HtmlGenericControl fs in attributeControls )
-                        phAttributes.Controls.Add( fs );
+                    phAttributes.Controls.Clear();
+                    Rock.Attribute.Helper.AddEditControls( _page, phAttributes, !Page.IsPostBack );
+
+                    List<string> blockContexts = new List<string>();
+                    foreach ( var block in _page.Blocks )
+                    {
+                        var blockControl = TemplateControl.LoadControl( block.BlockType.Path ) as Rock.Web.UI.RockBlock;
+                        if ( blockControl != null )
+                        {
+                            blockControl.CurrentPage = _page;
+                            blockControl.CurrentBlock = block;
+                            foreach ( var context in blockControl.ContextTypesRequired )
+                                if ( !blockContexts.Contains( context ) )
+                                    blockContexts.Add( context );
+                        }
+                    }
+
+                    phContextPanel.Visible = blockContexts.Count > 0;
+
+                    int i = 0;
+                    foreach ( string context in blockContexts )
+                    {
+                        var tbContext = new LabeledTextBox();
+                        tbContext.ID = string.Format( "context_{0}", i++ );
+                        tbContext.Required = true;
+                        tbContext.LabelText = context;
+
+                        if ( _page.PageContexts.ContainsKey( context ) )
+                            tbContext.Text = _page.PageContexts[context];
+
+                        phContext.Controls.Add( tbContext );
+                    }
 
                 }
                 else
@@ -75,10 +104,10 @@ namespace RockWeb.Blocks.Administration
 
         protected override void OnLoad( EventArgs e )
         {
-            if (!Page.IsPostBack && _page.Authorized( "Configure", CurrentUser ) )
+            if (!Page.IsPostBack && _page.IsAuthorized( "Administrate", CurrentPerson ) )
             {
-                Rock.CMS.PageService pageService = new Rock.CMS.PageService();
-                Rock.CMS.Page page = pageService.Get( _page.Id );
+                Rock.Model.PageService pageService = new Rock.Model.PageService();
+                Rock.Model.Page page = pageService.Get( _page.Id );
                 
                 rptProperties.DataSource = tabs;
                 rptProperties.DataBind();
@@ -93,13 +122,15 @@ namespace RockWeb.Blocks.Administration
                 cbMenuDescription.Checked = _page.MenuDisplayDescription;
                 cbMenuIcon.Checked = _page.MenuDisplayIcon;
                 cbMenuChildPages.Checked = _page.MenuDisplayChildPages;
+                tbIconCssClass.Text = _page.IconCssClass;
                 cbRequiresEncryption.Checked = _page.RequiresEncryption;
-                cbEnableViewState.Checked = _page.EnableViewstate;
+                cbEnableViewState.Checked = _page.EnableViewState;
                 cbIncludeAdminFooter.Checked = _page.IncludeAdminFooter;
                 tbCacheDuration.Text = _page.OutputCacheDuration.ToString();
                 tbDescription.Text = _page.Description;
                 tbPageRoute.Text = string.Join(",", page.PageRoutes.Select( route => route.Route ).ToArray());
-              
+                imgIcon.ImageId = page.IconFileId;
+
             }
 
             base.OnLoad( e );
@@ -132,23 +163,20 @@ namespace RockWeb.Blocks.Administration
             {
                 using ( new Rock.Data.UnitOfWorkScope() )
                 {
-                    Rock.CMS.PageService pageService = new Rock.CMS.PageService();
-                    Rock.CMS.Page page = pageService.Get( _page.Id );
-                    Rock.CMS.PageRouteService routeService = new Rock.CMS.PageRouteService();
-                    Rock.CMS.PageRoute pr;
+                    var pageService = new Rock.Model.PageService();
+                    var routeService = new Rock.Model.PageRouteService();
+                    var contextService = new Rock.Model.PageContextService();
+                    
+                    var page = pageService.Get( _page.Id );
 
                     int parentPage = Int32.Parse( ddlParentPage.SelectedValue );
                     if ( page.ParentPageId != parentPage )
                     {
                         if ( page.ParentPageId.HasValue )
-                            Rock.Web.Cache.Page.Flush( page.ParentPageId.Value );
+                            Rock.Web.Cache.PageCache.Flush( page.ParentPageId.Value );
 
                         if ( parentPage != 0 )
-                            Rock.Web.Cache.Page.Flush( parentPage );
-
-                        foreach ( var route in page.PageRoutes )
-                            routeService.Delete( route, CurrentPersonId );
-                        page.PageRoutes.Clear();
+                            Rock.Web.Cache.PageCache.Flush( parentPage );
                     }
 
                     page.Name = tbPageName.Text;
@@ -158,33 +186,59 @@ namespace RockWeb.Blocks.Administration
                     else
                         page.ParentPageId = null;
                     page.Layout = ddlLayout.Text;
-                    page.DisplayInNavWhen = (Rock.CMS.DisplayInNavWhen)Enum.Parse( typeof( Rock.CMS.DisplayInNavWhen ), ddlMenuWhen.SelectedValue );
+                    page.DisplayInNavWhen = (Rock.Model.DisplayInNavWhen)Enum.Parse( typeof( Rock.Model.DisplayInNavWhen ), ddlMenuWhen.SelectedValue );
                     page.MenuDisplayDescription = cbMenuDescription.Checked;
                     page.MenuDisplayIcon = cbMenuIcon.Checked;
+                    page.IconFileId = imgIcon.ImageId;
                     page.MenuDisplayChildPages = cbMenuChildPages.Checked;
+                    page.IconCssClass = tbIconCssClass.Text;
                     page.RequiresEncryption = cbRequiresEncryption.Checked;
                     page.EnableViewState = cbEnableViewState.Checked;
                     page.IncludeAdminFooter = cbIncludeAdminFooter.Checked;
                     page.OutputCacheDuration = Int32.Parse( tbCacheDuration.Text );
                     page.Description = tbDescription.Text;
                     
+                    foreach ( var pageRoute in page.PageRoutes.ToList() )
+                        routeService.Delete( pageRoute, CurrentPersonId );
+                    page.PageRoutes.Clear();
+
+                    foreach ( var pageContext in page.PageContexts.ToList() )
+                        contextService.Delete( pageContext, CurrentPersonId);
+                    page.PageContexts.Clear();
+
                     foreach ( string route in tbPageRoute.Text.SplitDelimitedValues() )
                     {
-                        pr = new Rock.CMS.PageRoute();
-                        pr.Route = route;
-                        pr.Guid = Guid.NewGuid();
-                        page.PageRoutes.Add( pr );
+                        var pageRoute = new Rock.Model.PageRoute();
+                        pageRoute.Route = route;
+                        pageRoute.Guid = Guid.NewGuid();
+                        page.PageRoutes.Add( pageRoute );
                     }
+
+                    if (phContextPanel.Visible)
+                        foreach ( var control in phContext.Controls)
+                            if ( control is LabeledTextBox )
+                            {
+                                var tbContext = control as LabeledTextBox;
+                                var pageContext = new Rock.Model.PageContext();
+                                pageContext.Entity = tbContext.LabelText;
+                                pageContext.IdParameter = tbContext.Text;
+                                page.PageContexts.Add( pageContext );
+                            }
 
                     pageService.Save( page, CurrentPersonId );
 
                     Rock.Attribute.Helper.GetEditValues( phAttributes, _page );
                     _page.SaveAttributeValues( CurrentPersonId );
 
-                    Rock.Web.Cache.Page.Flush( _page.Id );
+                    Rock.Web.Cache.PageCache.Flush( _page.Id );
                 }
 
-                string script = "window.parent.closeModal()";
+                string script = @"
+if ( window.parent.closeModal != null)
+{
+    window.parent.closeModal();
+}
+";
                 ScriptManager.RegisterStartupScript( this.Page, this.GetType(), "close-modal", script, true );
             }
         }
@@ -197,18 +251,18 @@ namespace RockWeb.Blocks.Administration
         {
             ddlParentPage.Items.Clear();
             ddlParentPage.Items.Add( new ListItem( "Root", "0" ) );
-            foreach ( var page in new Rock.CMS.PageService().GetByParentPageId( null ) )
+            foreach ( var page in new Rock.Model.PageService().GetByParentPageId( null ) )
                 AddPage( page, 1 );
 
             ddlLayout.Items.Clear();
-            DirectoryInfo di = new DirectoryInfo( Path.Combine( this.Page.Request.MapPath( this.ThemePath ), "Layouts" ) );
+            DirectoryInfo di = new DirectoryInfo( Path.Combine( this.Page.Request.MapPath( this.CurrentTheme ), "Layouts" ) );
             foreach ( FileInfo fi in di.GetFiles( "*.aspx" ) )
                 ddlLayout.Items.Add( new ListItem( fi.Name.Remove( fi.Name.IndexOf( ".aspx" ) ) ) );
 
-            ddlMenuWhen.BindToEnum( typeof( Rock.CMS.DisplayInNavWhen ) );
+            ddlMenuWhen.BindToEnum( typeof( Rock.Model.DisplayInNavWhen ) );
         }
 
-        private void AddPage( Rock.CMS.Page page, int level )
+        private void AddPage( Rock.Model.Page page, int level )
         {
             string pageName = new string( '-', level ) + page.Name;
             ddlParentPage.Items.Add( new ListItem( pageName, page.Id.ToString() ) );
@@ -239,7 +293,6 @@ namespace RockWeb.Blocks.Administration
                 pnlBasicProperty.Visible = true;
                 pnlMenuDisplay.Visible = false;
                 pnlAdvancedSettings.Visible = false;
-                pnlRoutes.Visible = false;
                 pnlBasicProperty.DataBind();
             }
             else if ( CurrentProperty.Equals( "Menu Display" ) )
@@ -247,7 +300,6 @@ namespace RockWeb.Blocks.Administration
                 pnlBasicProperty.Visible = false;
                 pnlMenuDisplay.Visible = true;
                 pnlAdvancedSettings.Visible = false;
-                pnlRoutes.Visible = false;
                 pnlMenuDisplay.DataBind();
             }
             else if ( CurrentProperty.Equals( "Advanced Settings" ) )
@@ -255,16 +307,7 @@ namespace RockWeb.Blocks.Administration
                 pnlBasicProperty.Visible = false;
                 pnlMenuDisplay.Visible = false;
                 pnlAdvancedSettings.Visible = true;
-                pnlRoutes.Visible = false;
                 pnlAdvancedSettings.DataBind();
-            }
-            else
-            {
-                pnlBasicProperty.Visible = false;
-                pnlMenuDisplay.Visible = false;
-                pnlAdvancedSettings.Visible = false;
-                pnlRoutes.Visible = true;
-                pnlRoutes.DataBind();   
             }
 
             upPanel.DataBind();

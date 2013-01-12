@@ -14,86 +14,9 @@ namespace Rock.Web.UI.Controls
     /// A composite control that renders a label, textbox, and datavalidation control for a specific field of a data model
     /// </summary>
     [ToolboxData( "<{0}:DataTextBox runat=server></{0}:DataTextBox>" )]
-    public class DataTextBox : TextBox
+    public class DataTextBox : LabeledTextBox
     {
-        private Label label;
-        private Validation.DataAnnotationValidator validator;
-
-        /// <summary>
-        /// Gets or sets the help tip.
-        /// </summary>
-        /// <value>
-        /// The help tip.
-        /// </value>
-        [
-        Bindable( true ),
-        Category( "Appearance" ),
-        DefaultValue( "" ),
-        Description( "The help tip." )
-        ]
-        public string Tip
-        {
-            get
-            {
-                string s = ViewState["Tip"] as string;
-                return s == null ? string.Empty : s;
-            }
-            set
-            {
-                ViewState["Tip"] = value;
-            }
-        }
-
-        /// <summary>
-        /// Gets or sets the help block.
-        /// </summary>
-        /// <value>
-        /// The help block.
-        /// </value>
-        [
-        Bindable( true ),
-        Category( "Appearance" ),
-        DefaultValue( "" ),
-        Description( "The help block." )
-        ]
-        public string Help
-        {
-            get
-            {
-                string s = ViewState["Help"] as string;
-                return s == null ? string.Empty : s;
-            }
-            set
-            {
-                ViewState["Help"] = value;
-            }
-        }
-
-        /// <summary>
-        /// Gets or sets the label text.
-        /// </summary>
-        /// <value>
-        /// The label text.
-        /// </value>
-        [
-        Bindable( true ),
-        Category( "Appearance" ),
-        DefaultValue( "" ),
-        Description( "The text for the label." )
-        ]
-        public string LabelText
-        {
-            get
-            {
-                EnsureChildControls();
-                return label.Text;
-            }
-            set
-            {
-                EnsureChildControls();
-                label.Text = value;
-            }
-        }
+        private Validation.DataAnnotationValidator dataValidator;
 
         /// <summary>
         /// Gets or sets the name of the assembly qualified name of the entity that is being validated
@@ -112,12 +35,12 @@ namespace Rock.Web.UI.Controls
             get
             {
                 EnsureChildControls();
-                return validator.SourceTypeName;
+                return dataValidator.SourceTypeName;
             }
             set
             {
                 EnsureChildControls();
-                validator.SourceTypeName = value;
+                dataValidator.SourceTypeName = value;
             }
         }
 
@@ -138,62 +61,25 @@ namespace Rock.Web.UI.Controls
             get
             {
                 EnsureChildControls();
-                return validator.PropertyName;
+                return dataValidator.PropertyName;
             }
             set
             {
                 EnsureChildControls();
-                validator.PropertyName = value;
+                dataValidator.PropertyName = value;
                 if ( this.LabelText == string.Empty )
                     this.LabelText = value.SplitCase();
             }
         }
 
         /// <summary>
-        /// Renders a label and <see cref="T:System.Web.UI.WebControls.TextBox"/> control to the specified <see cref="T:System.Web.UI.HtmlTextWriter"/> object.
+        /// Shows the error message.
         /// </summary>
-        /// <param name="writer">The <see cref="T:System.Web.UI.HtmlTextWriter"/> that receives the rendered output.</param>
-        protected override void Render( HtmlTextWriter writer )
+        /// <param name="errorMessage">The error message.</param>
+        public void ShowErrorMessage( string errorMessage )
         {
-            bool isValid = validator.IsValid;
-
-            writer.AddAttribute( "class", isValid ? "" : "error" );
-            writer.RenderBeginTag( HtmlTextWriterTag.Dl );
-
-            writer.RenderBeginTag( HtmlTextWriterTag.Dt );
-            if ( validator.Required )
-                writer.AddAttribute( "class", "required" );
-            label.RenderControl( writer );
-            writer.RenderEndTag();
-
-            writer.RenderBeginTag( HtmlTextWriterTag.Dd );
-            base.Render( writer );
-
-            validator.RenderControl( writer );
-
-            if ( Tip.Trim() != string.Empty )
-            {
-                writer.AddAttribute( "class", "help-tip" );
-                writer.AddAttribute( "href", "#" );
-                writer.RenderBeginTag( HtmlTextWriterTag.A );
-                writer.Write( "help" );
-                writer.RenderBeginTag( HtmlTextWriterTag.Span );
-                writer.Write( Tip.Trim() );
-                writer.RenderEndTag();
-                writer.RenderEndTag();
-            }
-
-            if ( Help.Trim() != string.Empty )
-            {
-                writer.AddAttribute( "class", "help-block" );
-                writer.RenderBeginTag( HtmlTextWriterTag.Span );
-                writer.Write( Tip.Trim() );
-                writer.RenderEndTag();
-            }
-
-            writer.RenderEndTag();
-
-            writer.RenderEndTag();
+            dataValidator.ErrorMessage = errorMessage;
+            dataValidator.IsValid = false;
         }
 
         /// <summary>
@@ -203,19 +89,97 @@ namespace Rock.Web.UI.Controls
         {
             base.CreateChildControls();
 
-            Controls.Clear();
+            dataValidator = new Validation.DataAnnotationValidator();
+            dataValidator.ID = this.ID + "_dav";
+            dataValidator.ControlToValidate = this.ID;
+            dataValidator.Display = ValidatorDisplay.Dynamic;
+            dataValidator.CssClass = "help-inline";
+            Controls.Add( dataValidator );
+        }
 
-            label = new Label();
-            label.AssociatedControlID = this.ID;
+        /// <summary>
+        /// Renders a label and <see cref="T:System.Web.UI.WebControls.TextBox"/> control to the specified <see cref="T:System.Web.UI.HtmlTextWriter"/> object.
+        /// </summary>
+        /// <param name="writer">The <see cref="T:System.Web.UI.HtmlTextWriter"/> that receives the rendered output.</param>
+        protected override void Render( HtmlTextWriter writer )
+        {
+            bool isValid = ( !Required || requiredFieldValidator.IsValid ) && dataValidator.IsValid;
 
-            validator = new Validation.DataAnnotationValidator();
-            validator.ID = this.ID + "_dav";
-            validator.ControlToValidate = this.ID;
-            validator.Display = ValidatorDisplay.Dynamic;
-            validator.CssClass = "validation-error";
+            writer.AddAttribute( "class", "control-group" +
+                ( isValid ? "" : " error" ) +
+                ( Required ? " required" : "" ) );
+            writer.RenderBeginTag( HtmlTextWriterTag.Div );
 
-            Controls.Add( label );
-            Controls.Add( validator );
+            label.AddCssClass( "control-label" );
+            label.RenderControl( writer );
+
+            writer.AddAttribute( "class", "controls" );
+            writer.RenderBeginTag( HtmlTextWriterTag.Div );
+            base.MaxLength = dataValidator.ValueMaxLength;
+
+            RenderBase( writer );
+
+            if ( Required )
+            {
+                requiredFieldValidator.ErrorMessage = LabelText + " is Required.";
+                requiredFieldValidator.RenderControl( writer );
+            }
+
+            dataValidator.RenderControl( writer );
+
+            if ( Tip.Trim() != string.Empty )
+            {
+                writer.AddAttribute( "class", "help-tip" );
+                writer.AddAttribute( "href", "#" );
+                writer.RenderBeginTag( HtmlTextWriterTag.A );
+                writer.RenderBeginTag( HtmlTextWriterTag.Span );
+                writer.Write( Tip.Trim() );
+                writer.RenderEndTag();
+                writer.RenderEndTag();
+            }
+
+            if ( Help.Trim() != string.Empty )
+            {
+                writer.AddAttribute( "class", "alert alert-info" );
+                writer.RenderBeginTag( HtmlTextWriterTag.Div );
+                writer.Write( Help.Trim() );
+                writer.RenderEndTag();
+            }
+
+            writer.RenderEndTag();
+
+            writer.RenderEndTag();
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether this instance is valid.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if this instance is valid; otherwise, <c>false</c>.
+        /// </value>
+        public bool IsValid
+        {
+            get
+            {
+                return dataValidator.IsValid;
+            }
+        }
+
+        /// <summary>
+        /// Texts as integer.
+        /// </summary>
+        /// <returns></returns>
+        public int? TextAsInteger()
+        {
+            int value;
+            if ( int.TryParse( this.Text, out value ) )
+            {
+                return value;
+            }
+            else
+            {
+                return null;
+            }
         }
     }
 }

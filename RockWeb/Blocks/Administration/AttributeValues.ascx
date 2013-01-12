@@ -3,16 +3,12 @@
 <asp:UpdatePanel ID="upSettings" runat="server">
 <ContentTemplate>
 
-    <asp:Panel ID="pnlMessage" runat="server" Visible="false" CssClass="alert-message block-massage error"/>
+    <asp:Panel ID="pnlMessage" runat="server" Visible="false" CssClass="alert alert-error block-message error"/>
 
-    <div class="grid-filter">
-        <fieldset>
-            <legend>Filter</legend>
-            <Rock:LabeledDropDownList ID="ddlCategoryFilter" runat="server" LabelText="Category" AutoPostBack="true" OnSelectedIndexChanged="ddlCategoryFilter_SelectedIndexChanged" />
-        </fieldset>
-    </div>
-
-    <Rock:Grid ID="rGrid" runat="server">
+    <Rock:GridFilter ID="rFilter" runat="server">
+        <Rock:LabeledDropDownList ID="ddlCategoryFilter" runat="server" LabelText="Category" />
+    </Rock:GridFilter>
+    <Rock:Grid ID="rGrid" runat="server" OnRowSelected="rGrid_Edit">
         <Columns>
             <asp:BoundField DataField="Category" HeaderText="Category" />
             <asp:BoundField DataField="Name" HeaderText="Name" />
@@ -22,20 +18,20 @@
                 <HeaderTemplate>Value</HeaderTemplate>
                 <ItemTemplate><asp:Literal ID="lValue" runat="server"></asp:Literal></ItemTemplate>
             </asp:TemplateField>
-            <Rock:EditField OnClick="rGrid_Edit" />
         </Columns>
     </Rock:Grid>
 
     <Rock:ModalDialog id="modalDetails" runat="server" Title="Attribute" >
     <Content>
         <asp:HiddenField ID="hfId" runat="server" />
-        <asp:ValidationSummary ID="valSummaryTop" runat="server" HeaderText="Please Correct the Following" CssClass="alert-message block-message error"/>
+        <asp:ValidationSummary ID="valSummaryTop" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-error block-message error"/>
         <fieldset>
-            <dl>
-                <dt><label><asp:Literal ID="lCaption" runat="server"></asp:Literal></label></dt>
-                <dd><asp:PlaceHolder ID="phEditControl" runat="server"></asp:PlaceHolder></dd>
-            </dl>
-            <dt></dt>
+            <div class="control-group">
+                <label class="control-label"><asp:Literal ID="lCaption" runat="server"></asp:Literal></label>
+                <div class="controls">
+                    <asp:PlaceHolder ID="phEditControl" runat="server"></asp:PlaceHolder>
+                </div>
+            </div>
         </fieldset>
     </Content>
     </Rock:ModalDialog>

@@ -78,16 +78,16 @@ namespace Rock.Web.UI.Controls
         DefaultValue( false ),
         Description( "Disable Default Save Behavior" )
         ]
-        public bool DisableDefaultSave
+        public bool IsDefaultSaveDisabled
         {
             get
             {
-                bool? b = ViewState["DisableDefaultSave"] as bool?;
+                bool? b = ViewState["IsDefaultSaveDisabled"] as bool?;
                 return ( b == null ) ? false : b.Value;
             }
             set
             {
-                ViewState["DisableDefaultSave"] = value;
+                ViewState["IsDefaultSaveDisabled"] = value;
             }
         }
 
@@ -163,13 +163,13 @@ namespace Rock.Web.UI.Controls
             _cancelLink = new HtmlAnchor();
             _footerPanel.Controls.Add( _cancelLink );
             _cancelLink.ID = "cancelLink";
-            _cancelLink.Attributes.Add( "class", "btn secondary" );
+            _cancelLink.Attributes.Add( "class", "btn" );
             _cancelLink.InnerText = "Cancel";
 
             _saveLink = new HtmlAnchor();
             _footerPanel.Controls.Add( _saveLink );
             _saveLink.ID = "saveLink";
-            _saveLink.Attributes.Add( "class", "btn primary" );
+            _saveLink.Attributes.Add( "class", "btn btn-primary" );
             _saveLink.InnerText = "Save";
             _saveLink.ServerClick += SaveLink_ServerClick;
 
@@ -186,7 +186,7 @@ namespace Rock.Web.UI.Controls
             _closeLink.Attributes["onclick"] = string.Format(
                 "{0} $find('{1}').hide();return false;", this.OnCancelScript, this.BehaviorID );
 
-            if ( SaveClick == null && !DisableDefaultSave )
+            if ( SaveClick == null && !IsDefaultSaveDisabled )
                 this.OkControlID = _saveLink.ID;
 
             // If no target control has been defined, use a hidden default button.

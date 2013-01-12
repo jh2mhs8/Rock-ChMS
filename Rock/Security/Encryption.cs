@@ -1,6 +1,12 @@
-﻿using System;
+//
+// THIS WORK IS LICENSED UNDER A CREATIVE COMMONS ATTRIBUTION-NONCOMMERCIAL-
+// SHAREALIKE 3.0 UNPORTED LICENSE:
+// http://creativecommons.org/licenses/by-nc-sa/3.0/
+//
+using System;
 using System.Configuration;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace Rock.Security
 {
@@ -13,16 +19,17 @@ namespace Rock.Security
         /// Encrypts a string.
         /// </summary>
         /// <param name="Message">The string to encrypt.</param>
-        /// <param name="Passphrase">The passphrase to use.</param>
         /// <returns></returns>
         public static string EncryptString( string Message )
         {
             string encryptionPhrase = ConfigurationManager.AppSettings["EncryptionPhrase"];
             if ( String.IsNullOrWhiteSpace( encryptionPhrase ) )
+            {
                 encryptionPhrase = "Rock Rocks!";
+            }
 
             byte[] Results;
-            System.Text.UTF8Encoding UTF8 = new System.Text.UTF8Encoding();
+            UTF8Encoding UTF8 = new UTF8Encoding();
 
             // Step 1. We hash the passphrase using MD5
             // We use the MD5 hash generator as the result is a 128 bit byte array
@@ -63,16 +70,17 @@ namespace Rock.Security
         /// Decrypts a string.
         /// </summary>
         /// <param name="Message">The string to decrypt.</param>
-        /// <param name="Passphrase">The passphrase to use.</param>
         /// <returns></returns>
         public static string DecryptString( string Message )
         {
             string encryptionPhrase = ConfigurationManager.AppSettings["EncryptionPhrase"];
             if ( String.IsNullOrWhiteSpace( encryptionPhrase ) )
+            {
                 encryptionPhrase = "Rock Rocks!";
+            }
 
             byte[] Results;
-            System.Text.UTF8Encoding UTF8 = new System.Text.UTF8Encoding();
+            UTF8Encoding UTF8 = new UTF8Encoding();
 
             // Step 1. We hash the passphrase using MD5
             // We use the MD5 hash generator as the result is a 128 bit byte array

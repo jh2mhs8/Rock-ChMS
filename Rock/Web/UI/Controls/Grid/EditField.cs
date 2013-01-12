@@ -17,6 +17,16 @@ namespace Rock.Web.UI.Controls
     public class EditField : TemplateField
     {
         /// <summary>
+        /// Initializes a new instance of the <see cref="EditField" /> class.
+        /// </summary>
+        public EditField()
+            : base()
+        {
+            this.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
+            this.ItemStyle.CssClass = "grid-icon-cell edit";
+        }
+
+        /// <summary>
         /// Performs basic instance initialization for a data control field.
         /// </summary>
         /// <param name="sortingEnabled">A value that indicates whether the control supports the sorting of columns of data.</param>
@@ -26,12 +36,10 @@ namespace Rock.Web.UI.Controls
         /// </returns>
         public override bool Initialize( bool sortingEnabled, Control control )
         {
-            this.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
-            this.ItemStyle.CssClass = "grid-icon-cell edit";
-
             EditFieldTemplate editFieldTemplate = new EditFieldTemplate();
             editFieldTemplate.LinkButtonClick += editFieldTemplate_LinkButtonClick;
             this.ItemTemplate = editFieldTemplate;
+            ParentGrid = control as Grid;
 
             return base.Initialize( sortingEnabled, control );
         }
@@ -45,6 +53,14 @@ namespace Rock.Web.UI.Controls
         {
             OnClick( e );
         }
+
+        /// <summary>
+        /// Gets the parent grid.
+        /// </summary>
+        /// <value>
+        /// The parent grid.
+        /// </value>
+        public Grid ParentGrid { get; internal set; }
 
         /// <summary>
         /// Occurs when [click].
@@ -76,13 +92,22 @@ namespace Rock.Web.UI.Controls
             DataControlFieldCell cell = container as DataControlFieldCell;
             if ( cell != null )
             {
+                EditField editField = cell.ContainingField as EditField;
+                ParentGrid = editField.ParentGrid;
                 LinkButton lbEdit = new LinkButton();
-                lbEdit.Text = "Edit";
+                lbEdit.ToolTip = "Edit";
                 lbEdit.Click += lbEdit_Click;
-
                 cell.Controls.Add( lbEdit );
             }
         }
+
+        /// <summary>
+        /// Gets or sets the parent grid.
+        /// </summary>
+        /// <value>
+        /// The parent grid.
+        /// </value>
+        private Grid ParentGrid { get; set; }
 
         /// <summary>
         /// Handles the Click event of the lbEdit control.
@@ -94,7 +119,7 @@ namespace Rock.Web.UI.Controls
             if ( LinkButtonClick != null )
             {
                 GridViewRow row = ( GridViewRow )( ( LinkButton )sender ).Parent.Parent;
-                RowEventArgs args = new RowEventArgs( row.RowIndex );
+                RowEventArgs args = new RowEventArgs( row );
                 LinkButtonClick( sender, args );
             }
         }

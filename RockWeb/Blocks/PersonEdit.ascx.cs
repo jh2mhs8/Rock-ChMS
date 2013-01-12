@@ -5,34 +5,37 @@
 //
 
 using System;
+using System.Collections.Generic;
 using System.Web.UI;
 
-using Rock.CRM;
+using Rock.Model;
 
 namespace RockWeb.Blocks
 {
-    public partial class PersonEdit : Rock.Web.UI.Block
+    public partial class PersonEdit : Rock.Web.UI.RockBlock
     {
+        private Person person = null;
+
+        /// <summary>
+        /// Gets a list of any context entities that the block requires.
+        /// </summary>
+        public override List<string> ContextTypesRequired
+        {
+            get { return new List<string>() { "Rock.Model.Person" }; }
+        }
+
         protected void Page_Load( object sender, EventArgs e )
         {
+            person = CurrentPage.GetCurrentContext( "Rock.Model.Person" ) as Rock.Model.Person;
+            if (person == null)
+            {
+                PersonService personService = new PersonService();
+                person = new Person();
+                personService.Add( person, CurrentPersonId );
+            }
+
             if ( !IsPostBack )
             {
-                Person person;
-
-                string personId = ( string )Page.RouteData.Values["PersonId"] ?? string.Empty;
-                if ( string.IsNullOrEmpty( personId ) )
-                    personId = Request.QueryString["PersonId"];
-
-                PersonService personService = new PersonService();
-
-                if ( !string.IsNullOrEmpty( personId ) )
-                    person = personService.Get( Convert.ToInt32( personId ) );
-                else
-                {
-                    person = new Person();
-                    personService.Add( person, CurrentPersonId );
-                }
-
                 txtFirstName.Text = person.FirstName;
                 txtNickName.Text = person.NickName;
                 txtLastName.Text = person.LastName;
@@ -41,29 +44,17 @@ namespace RockWeb.Blocks
 
         protected void btnUpdate_Click( object sender, EventArgs e )
         {
-            if ( Page.IsValid )
+            if ( Page.IsValid && person != null)
             {
-                Person person;
-
-                string personId = ( string )Page.RouteData.Values["PersonId"] ?? string.Empty;
-                if ( string.IsNullOrEmpty( personId ) )
-                    personId = Request.QueryString["PersonId"];
-
                 PersonService personService = new PersonService();
-
-                if ( !string.IsNullOrEmpty( personId ) )
-                    person = personService.Get( Convert.ToInt32( personId ) );
-                else
-                {
-                    person = new Person();
-                    personService.Add( person, CurrentPersonId );
-                }
 
                 person.GivenName = txtFirstName.Text;
                 person.NickName = txtNickName.Text;
                 person.LastName = txtLastName.Text;
+                
                 if ( person.Guid == Guid.Empty )
                     personService.Add( person, CurrentPersonId );
+                
                 personService.Save( person, CurrentPersonId );
             }
         }

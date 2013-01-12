@@ -7,30 +7,41 @@
 using System;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
+using Rock;
+using Rock.Web.Cache;
+using Rock.Web.UI;
 
 namespace RockWeb.Blocks.Administration
 {
-    public partial class BlockProperties : Rock.Web.UI.Block
+    /// <summary>
+    /// 
+    /// </summary>
+    public partial class BlockProperties : RockBlock
     {
-        private Rock.Web.Cache.BlockInstance _blockInstance = null;
-        private string _zoneName = string.Empty;
+        //private BlockCache _block = null;
+        //private string _zoneName = string.Empty;
 
+        /// <summary>
+        /// Raises the <see cref="E:Init" /> event.
+        /// </summary>
+        /// <param name="e">The <see cref="EventArgs" /> instance containing the event data.</param>
         protected override void OnInit( EventArgs e )
         {
             Rock.Web.UI.DialogMasterPage masterPage = this.Page.Master as Rock.Web.UI.DialogMasterPage;
             if ( masterPage != null )
+            {
                 masterPage.OnSave += new EventHandler<EventArgs>( masterPage_OnSave );
+            }
             
             try
             {
-                int blockInstanceId = Convert.ToInt32( PageParameter( "BlockInstance" ) );
-                _blockInstance = Rock.Web.Cache.BlockInstance.Read( blockInstanceId );
+                int blockId = Convert.ToInt32( PageParameter( "BlockId" ) );
+                BlockCache _block = BlockCache.Read( blockId, CurrentPage.SiteId );
 
-                if ( _blockInstance.Authorized( "Configure", CurrentUser ) )
+                if ( _block.IsAuthorized( "Administrate", CurrentPerson ) )
                 {
-                    var attributeControls = Rock.Attribute.Helper.GetEditControls( _blockInstance, !Page.IsPostBack );
-                    foreach ( HtmlGenericControl fs in attributeControls )
-                        phAttributes.Controls.Add( fs );
+                    phAttributes.Controls.Clear();
+                    Rock.Attribute.Helper.AddEditControls( _block, phAttributes, !Page.IsPostBack );
                 }
                 else
                 {
@@ -45,51 +56,70 @@ namespace RockWeb.Blocks.Administration
             base.OnInit( e );
         }
 
+        /// <summary>
+        /// Raises the <see cref="E:System.Web.UI.Control.Load" /> event.
+        /// </summary>
+        /// <param name="e">The <see cref="T:System.EventArgs" /> object that contains the event data.</param>
         protected override void OnLoad( EventArgs e )
         {
-            if ( !Page.IsPostBack && _blockInstance.Authorized( "Configure", CurrentUser ) )
+            int blockId = Convert.ToInt32( PageParameter( "BlockId" ) );
+            BlockCache _block = BlockCache.Read( blockId, CurrentPage.SiteId );
+
+            if ( !Page.IsPostBack && _block.IsAuthorized( "Administrate", CurrentPerson ) )
             {
-                tbBlockName.Text = _blockInstance.Name;
-                tbCacheDuration.Text = _blockInstance.OutputCacheDuration.ToString();
+                tbBlockName.Text = _block.Name;
+                tbCacheDuration.Text = _block.OutputCacheDuration.ToString();
             }
 
             base.OnLoad( e );
         }
 
-        protected override void OnPreRender( EventArgs e )
-        {
-            base.OnPreRender( e );
-
-            if ( Page.IsPostBack && !Page.IsValid )
-                Rock.Attribute.Helper.SetErrorIndicators( phAttributes, _blockInstance );
-        }
-
+        /// <summary>
+        /// Handles the OnSave event of the masterPage control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs" /> instance containing the event data.</param>
         protected void masterPage_OnSave( object sender, EventArgs e )
         {
+            int blockId = Convert.ToInt32( PageParameter( "BlockId" ) );
+            BlockCache _block = BlockCache.Read( blockId, CurrentPage.SiteId );
             if ( Page.IsValid )
             {
                 using ( new Rock.Data.UnitOfWorkScope() )
                 {
-                    Rock.CMS.BlockInstanceService blockInstanceService = new Rock.CMS.BlockInstanceService();
-                    Rock.CMS.BlockInstance blockInstance = blockInstanceService.Get( _blockInstance.Id );
+                    var blockService = new Rock.Model.BlockService();
+                    var block = blockService.Get( _block.Id );
 
-                    Rock.Attribute.Helper.LoadAttributes( blockInstance );
+                    block.LoadAttributes();
 
-                    blockInstance.Name = tbBlockName.Text;
-                    blockInstance.OutputCacheDuration = Int32.Parse( tbCacheDuration.Text );
-                    blockInstanceService.Save( blockInstance, CurrentPersonId );
+                    block.Name = tbBlockName.Text;
+                    block.OutputCacheDuration = Int32.Parse( tbCacheDuration.Text );
+                    blockService.Save( block, CurrentPersonId );
 
-                    Rock.Attribute.Helper.GetEditValues( phAttributes, _blockInstance );
-                    _blockInstance.SaveAttributeValues( CurrentPersonId );
+                    Rock.Attribute.Helper.GetEditValues( phAttributes, _block );
+                    _block.SaveAttributeValues( CurrentPersonId );
 
-                    Rock.Web.Cache.BlockInstance.Flush( _blockInstance.Id );
+                    Rock.Web.Cache.BlockCache.Flush( _block.Id );
                 }
 
-                string script = "window.parent.closeModal()";
+                string script = @"
+if ( window.parent.closeModal != null)
+{
+    window.parent.closeModal();
+}
+";
                 ScriptManager.RegisterStartupScript( this.Page, this.GetType(), "close-modal", script, true );
+            }
+            else
+            {
+                Rock.Attribute.Helper.SetErrorIndicators( phAttributes, _block );
             }
         }
 
+        /// <summary>
+        /// Displays the error.
+        /// </summary>
+        /// <param name="message">The message.</param>
         private void DisplayError( string message )
         {
             pnlMessage.Controls.Clear();

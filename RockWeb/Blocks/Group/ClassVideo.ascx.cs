@@ -1,22 +1,26 @@
-﻿using System;
+﻿//
+// THIS WORK IS LICENSED UNDER A CREATIVE COMMONS ATTRIBUTION-NONCOMMERCIAL-
+// SHAREALIKE 3.0 UNPORTED LICENSE:
+// http://creativecommons.org/licenses/by-nc-sa/3.0/
+//
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Web;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
-
 using Rock;
-using Rock.Groups;
+using Rock.Attribute;
+using Rock.Model;
 
 namespace RockWeb.Blocks.Group
 {
-    [Rock.Attribute.Property( 0, "Group Id", "Behavior", "The Group Id of the parent group", false, "", "Rock", "Rock.FieldTypes.Integer" )]
-    [Rock.Attribute.Property( 1, "Group Levels", "Behavior", "The Group Role to use when person is added to group", true, "", "Rock", "Rock.FieldTypes.Integer" )]
-    [Rock.Attribute.Property( 2, "Group Role", "Behavior", "The Group Role to use when person is added to group", true, "", "Rock", "Rock.FieldTypes.Integer" )]
-    [Rock.Attribute.Property( 3, "Duration Attribute Key", "Behavior", "The key of the duration attribute", false, "Duration" )]
-    [Rock.Attribute.Property( 3, "Video Attribute Key", "Behavior", "The key of the video attribute", false, "Video" )]
-    public partial class ClassVideo : Rock.Web.UI.Block
+    [IntegerField( 0, "Group Id", "", null, "Behavior", "The Group Id of the parent group")]
+    [IntegerField( 1, "Group Levels", "", null, "Behavior", "The Group Role to use when person is added to group", true )]
+    [IntegerField( 2, "Group Role", "", null, "Behavior", "The Group Role to use when person is added to group", true )]
+    [TextField( 3, "Duration Attribute Key", "Behavior", "The key of the duration attribute", false, "Duration" )]
+    [TextField( 3, "Video Attribute Key", "Behavior", "The key of the video attribute", false, "Video" )]
+    public partial class ClassVideo : Rock.Web.UI.RockBlock
     {
         GroupService groupService = new GroupService();
 
@@ -29,12 +33,12 @@ namespace RockWeb.Blocks.Group
             base.OnInit( e );
 
             // Add the neccessary CSS and Scripts required for video field types
-            Rock.FieldTypes.Video.AddLinks( this.Page );
+            Rock.Field.Types.Video.AddLinks( this.Page );
 
-            if ( !Int32.TryParse( AttributeValue( "GroupLevels" ), out _levels ) )
+            if ( !Int32.TryParse( GetAttributeValue( "GroupLevels" ), out _levels ) )
                 _levels = int.MaxValue;
-            _videoAttributeKey = AttributeValue( "VideoAttributeKey" );
-            _durationAttributeKey = AttributeValue( "DurationAttributeKey" );
+            _videoAttributeKey = GetAttributeValue( "VideoAttributeKey" );
+            _durationAttributeKey = GetAttributeValue( "DurationAttributeKey" );
 
             // Build the content tree
             BuildHierarchy();
@@ -59,7 +63,7 @@ namespace RockWeb.Blocks.Group
         }}
 
     }});
-", BlockInstance.Id, hfVideoUrl.ClientID );
+", CurrentBlock.Id, hfVideoUrl.ClientID );
             this.Page.ClientScript.RegisterStartupScript( this.GetType(), "setVideo", script, true );
         }
 
@@ -70,7 +74,7 @@ namespace RockWeb.Blocks.Group
             phTreeView.Controls.Clear();
 
             int groupId = 0;
-            if ( Int32.TryParse( AttributeValue( "GroupId" ), out groupId ) )
+            if ( Int32.TryParse( GetAttributeValue( "GroupId" ), out groupId ) )
             {
                 var parentGroup = groupService.Get( groupId );
                 if ( parentGroup != null )
@@ -83,7 +87,7 @@ namespace RockWeb.Blocks.Group
             }
         }
 
-        private HtmlGenericControl RenderBranch( IEnumerable<Rock.Groups.Group> groups, int level )
+        private HtmlGenericControl RenderBranch( IEnumerable<Rock.Model.Group> groups, int level )
         {
             if ( level <= _levels )
             {
@@ -92,7 +96,7 @@ namespace RockWeb.Blocks.Group
 
                 foreach ( var group in groups )
                 {
-                    Rock.Attribute.Helper.LoadAttributes( group );
+                    group.LoadAttributes();
 
                     HtmlGenericControl li = new HtmlGenericControl( "li" );
                     ul.Controls.Add( li );
@@ -122,7 +126,7 @@ namespace RockWeb.Blocks.Group
                         {
                             HtmlGenericControl durationSpan = new HtmlGenericControl( "span" );
                             durationSpan.AddCssClass( "duration" );
-                            durationSpan.InnerText = group.AttributeValues[_durationAttributeKey].Value[0].Value;
+                            durationSpan.InnerText = group.AttributeValues[_durationAttributeKey][0].Value;
                             lb.Controls.Add( durationSpan );
                         }
                     }
@@ -154,21 +158,21 @@ namespace RockWeb.Blocks.Group
                     if ( Int32.TryParse( lb.Attributes["group"], out groupId ) )
                     {
                         int roleId = 0;
-                        if ( !Int32.TryParse( AttributeValue( "GroupRole" ), out roleId ) )
+                        if ( !Int32.TryParse( GetAttributeValue( "GroupRole" ), out roleId ) )
                             roleId = 0;
 
                         var group = groupService.Get( groupId );
                         if ( group != null &&
                             group.AttributeValues.ContainsKey( _videoAttributeKey ) )
                         {
-                            hfVideoUrl.Value = group.AttributeValues[_videoAttributeKey].Value[0].Value;
+                            hfVideoUrl.Value = group.AttributeValues[_videoAttributeKey][0].Value;
 
-                            MemberService memberService = new MemberService();
+                            GroupMemberService memberService = new GroupMemberService();
                             var groupMember = memberService.GetByGroupIdAndPersonIdAndGroupRoleId(
                                 groupId, CurrentPersonId.Value, roleId );
                             if ( groupMember == null )
                             {
-                                groupMember = new Member();
+                                groupMember = new GroupMember();
                                 groupMember.GroupId = groupId;
                                 groupMember.PersonId = CurrentPersonId.Value;
                                 groupMember.GroupRoleId = roleId;

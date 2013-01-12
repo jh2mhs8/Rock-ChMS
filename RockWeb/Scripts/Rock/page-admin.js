@@ -1,7 +1,9 @@
-﻿function saveBlockMove() {
+﻿var $moveLink;
+
+function saveBlockMove() {
 
     // The current block's id
-    var blockInstanceId = $('#modal-block-move_panel div.modal-footer a.btn.primary').attr('block-instance');
+    var blockId = $moveLink.attr('href');
 
     // The new zone selected
     var zoneName = $('#block-move-zone').val();
@@ -11,14 +13,14 @@
         type: 'GET',
         contentType: 'application/json',
         dataType: 'json',
-        url: rock.baseUrl + 'REST/CMS/BlockInstance/' + blockInstanceId,
+        url: rock.baseUrl + 'api/blocks/' + blockId,
         success: function (getData, status, xhr) {
 
             // Update the new zone
             getData.Zone = zoneName;
 
             // Set the appropriate parent value (layout or page)
-            if ($('#block-move-Location_0').attr('checked') == true) {
+            if ($('#block-move-Location_0').attr('checked') == 'checked') {
                 getData.Layout = null;
                 getData.PageId = rock.pageId;
             }
@@ -33,11 +35,11 @@
                 contentType: 'application/json',
                 dataType: 'json',
                 data: JSON.stringify(getData),
-                url: rock.baseUrl + 'REST/Cms/BlockInstance/Move/' + blockInstanceId,
+                url: rock.baseUrl + 'api/blocks/move/' + blockId,
                 success: function (data, status, xhr) {
 
                     // Get a reference to the block instance's container div
-                    var $source = $('#bid_' + blockInstanceId);
+                    var $source = $('#bid_' + blockId);
 
                     // Get a reference to the new zone's container
                     var $target = $('#zone-' + $('#block-move-zone').val());
@@ -75,16 +77,57 @@
 
 }
 
-$(document).ready(function () {
+// toggle the display of each block's container and config options
+function showBlockConfig() {
+    $('.zone-configuration').hide();
+    $('.zone-instance').removeClass('outline');
+    $('.block-configuration').toggle();
+    $('.block-instance').toggleClass('outline');
+
+    // Bind the block configure icon so that edit icons are displayed on hover
+    $(".block-configuration").hover(function () {
+        var barWidth = $('.block-configuration-bar', this).outerWidth() + 45 + 'px';
+        $(this).stop().animate({ width: barWidth }, 200).css({ 'z-index': '10' });
+    }, function () {
+        $(this).stop().animate({ width: '24px' }, 200).css({ 'z-index': '1' });
+    });
+
+    // Bind the block instance delete anchor
+    $('a.block-delete').click(function () {
+
+        if (confirm('Are you sure you want to delete this block?')) {
+
+            var blockId = $(this).attr('href');
+
+            // delete the block instance
+            $.ajax({
+                type: 'DELETE',
+                contentType: 'application/json',
+                dataType: 'json',
+                url: rock.baseUrl + 'api/blocks/' + blockId,
+                success: function (data, status, xhr) {
+
+                    // Remove the block instance's container div
+                    $('#bid_' + blockId).remove();
+
+                },
+                error: function (xhr, status, error) {
+                    alert(status + ' [' + error + ']: ' + xhr.responseText);
+                }
+            });
+
+        }
+
+        // Cancel the default action of the delete anchor tag
+        return false;
+
+    });
 
     // Bind the click event of the block move anchor tag
-    $('a.blockinstance-move').click(function () {
+    $('a.block-move').click(function () {
 
         // Get a reference to the anchor tag for use in the dialog success function
-        var $moveLink = $(this);
-
-        // Add the current block's id as an attribute of the move dialog's save button
-        $('#modal-block-move_panel div.modal-footer a.btn.primary').attr('block-instance', $(this).attr('href'));
+        $moveLink = $(this);
 
         // Set the dialog's zone selection select box value to the block's current zone 
         $('#block-move-zone').val($(this).attr('zone'));
@@ -105,66 +148,14 @@ $(document).ready(function () {
         return false;
 
     });
+}
 
-
-    // Bind the block instance delete anchor
-    $('a.blockinstance-delete').click(function () {
-
-        if (confirm('Are you sure you want to delete this block?')) {
-
-            var blockInstanceId = $(this).attr('href');
-
-            // delete the block instance
-            $.ajax({
-                type: 'DELETE',
-                contentType: 'application/json',
-                dataType: 'json',
-                url: rock.baseUrl + 'REST/CMS/BlockInstance/' + blockInstanceId,
-                success: function (data, status, xhr) {
-
-                    // Remove the block instance's container div
-                    $('#bid_' + blockInstanceId).remove();
-
-                },
-                error: function (xhr, status, error) {
-                    alert(status + ' [' + error + ']: ' + xhr.responseText);
-                }
-            });
-
-        }
-
-        // Cancel the default action of the delete anchor tag
-        return false;
-
-    });
-
-    // Bind the page's block config anchor to toggle the display
-    // of each block's container and config options
-    $('#cms-admin-footer .block-config').click(function () {
-        $('.zone-configuration').hide();
-        $('.zone-instance').removeClass('outline');
-        $('.block-configuration').toggle();
-        $('.block-instance').toggleClass('outline');
-        return false;
-    });
-
-    // Bind the page's zone config anchor to toggle the display
-    // of each zone's container and config options
-    $('#cms-admin-footer .page-zones').click(function () {
-        $('.block-configuration').hide();
-        $('.block-instance').removeClass('outline');
-        $('.zone-instance').toggleClass('outline');
-        $('.zone-configuration').toggle();
-        return false;
-    });
-
-    // Bind the block configure icon so that edit icons are displayed on hover
-    $(".block-configuration").hover(function () {
-        var barWidth = $('.block-configuration-bar', this).outerWidth() + 45 + 'px';
-        $(this).stop().animate({ width: barWidth }, 200).css({ 'z-index': '10' });
-    }, function () {
-        $(this).stop().animate({ width: '24px' }, 200).css({ 'z-index': '1' });
-    });
+// toggle the display of each zone's container and config options
+function showPageZones() {
+    $('.block-configuration').hide();
+    $('.block-instance').removeClass('outline');
+    $('.zone-instance').toggleClass('outline');
+    $('.zone-configuration').toggle();
 
     // Bind the zone configure icon so that edit icons are displayed on hover
     $(".zone-configuration").hover(function () {
@@ -173,4 +164,4 @@ $(document).ready(function () {
     }, function () {
         $(this).stop().animate({ width: '24px' }, 200).css({ 'z-index': '1' });
     });
-});
+}

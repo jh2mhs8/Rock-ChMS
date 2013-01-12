@@ -5,26 +5,19 @@
 //
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
 using System.Web.UI;
-using System.Web.UI.WebControls;
-
-using Rock.CMS;
+using Rock.Attribute;
+using Rock.Model;
 
 namespace RockWeb.Blocks.Security
 {
-    [Rock.Attribute.Property( 0, "Invalid UserName", "InvalidUserNameCaption", "Captions", "", false,
-        "The User Name/Password combination is not valid." )]
-    [Rock.Attribute.Property( 1, "Invalid Password", "InvalidPasswordCaption", "Captions", "", false,
-        "The User Name/Password combination is not valid." )]
-    [Rock.Attribute.Property( 2, "Success", "SuccessCaption", "Captions", "", false,
-        "Your password has been changed" )]
-    public partial class ChangePassword : Rock.Web.UI.Block
+    [TextField( 0, "Invalid UserName", "InvalidUserNameCaption", "Captions", "", false,"The User Name/Password combination is not valid." )]
+    [TextField( 1, "Invalid Password", "InvalidPasswordCaption", "Captions", "", false,"The User Name/Password combination is not valid." )]
+    [TextField( 2, "Success", "SuccessCaption", "Captions", "", false,"Your password has been changed" )]
+    public partial class ChangePassword : Rock.Web.UI.RockBlock
     {
 
-        #region Overridden Page Methods
+        #region Overridden RockPage Methods
 
         protected override void OnLoad( EventArgs e )
         {
@@ -46,15 +39,15 @@ namespace RockWeb.Blocks.Security
 
         protected void btnChange_Click( object sender, EventArgs e )
         {
-            UserService userService = new UserService();
-            User user = userService.GetByUserName( tbUserName.Text );
-            if ( user != null )
+            var userLoginService = new UserLoginService();
+            var userLogin = userLoginService.GetByUserName( tbUserName.Text );
+            if ( userLogin != null )
             {
-                if ( userService.ChangePassword( user, tbOldPassword.Text, tbPassword.Text ) )
+                if ( userLoginService.ChangePassword( userLogin, tbOldPassword.Text, tbPassword.Text ) )
                 {
-                    userService.Save( user, CurrentPersonId );
+                    userLoginService.Save( userLogin, CurrentPersonId );
 
-                    lSuccess.Text = AttributeValue( "SuccessCaption" );
+                    lSuccess.Text = GetAttributeValue( "SuccessCaption" );
                     pnlEntry.Visible = false;
                     pnlSuccess.Visible = true;
                 }
@@ -67,7 +60,7 @@ namespace RockWeb.Blocks.Security
 
         private void DisplayError( string message )
         {
-            lInvalid.Text = AttributeValue( message );
+            lInvalid.Text = GetAttributeValue( message );
             pnlInvalid.Visible = true;
         }
 

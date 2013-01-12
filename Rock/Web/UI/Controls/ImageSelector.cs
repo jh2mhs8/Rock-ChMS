@@ -3,7 +3,7 @@
 // SHAREALIKE 3.0 UNPORTED LICENSE:
 // http://creativecommons.org/licenses/by-nc-sa/3.0/
 //
-
+using System;
 using System.ComponentModel;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
@@ -12,13 +12,14 @@ using System.Web.UI.WebControls;
 using Rock;
 
 namespace Rock.Web.UI.Controls
-{   
+{
     /// <summary>
     /// A <see cref="T:System.Web.UI.WebControls.TextBox"/> control with an associated label.
     /// </summary>
     [ToolboxData( "<{0}:ImageSelector runat=server></{0}:ImageSelector>" )]
     public class ImageSelector : CompositeControl
     {
+        private Label label;
         private Image image;
         private HiddenField hiddenField;
         private FileUpload fileUpload;
@@ -28,7 +29,7 @@ namespace Rock.Web.UI.Controls
         /// Gets or sets a value indicating whether [display required indicator].
         /// </summary>
         /// <value>
-        /// 	<c>true</c> if [display required indicator]; otherwise, <c>false</c>.
+        ///     <c>true</c> if [display required indicator]; otherwise, <c>false</c>.
         /// </value>
         [
         Bindable( true ),
@@ -36,21 +37,56 @@ namespace Rock.Web.UI.Controls
         DefaultValue( "" ),
         Description( "Image Id" )
         ]
-        public string ImageId
+        public int? ImageId
         {
             get
             {
                 EnsureChildControls();
-                return hiddenField.Value;
+
+                int id = 0;
+                if ( Int32.TryParse( hiddenField.Value, out id ) )
+                {
+                    if ( id > 0 )
+                    {
+                        return id;
+                    }
+                }
+                return null;
+            }
+
+            set
+            {
+                EnsureChildControls();
+                hiddenField.Value = value.HasValue ? value.Value.ToString() : string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the label text.
+        /// </summary>
+        /// <value>
+        /// The label text.
+        /// </value>
+        [
+        Bindable( true ),
+        Category( "Appearance" ),
+        DefaultValue( "" ),
+        Description( "The text for the label." )
+        ]
+        public string LabelText
+        {
+            get
+            {
+                EnsureChildControls();
+                return label.Text;
             }
             set
             {
                 EnsureChildControls();
-                hiddenField.Value = value;
+                label.Text = value;
             }
         }
 
-        
         /// <summary>
         /// Raises the <see cref="E:System.Web.UI.Control.Init"/> event.
         /// </summary>
@@ -59,71 +95,85 @@ namespace Rock.Web.UI.Controls
         {
             base.OnInit( e );
 
-            Rock.Web.UI.Page.AddScriptLink( this.Page, "~/scripts/Kendo/kendo.core.min.js" );
-            Rock.Web.UI.Page.AddScriptLink( this.Page, "~/scripts/Kendo/kendo.upload.min.js" );
-            Rock.Web.UI.Page.AddCSSLink( this.Page, "~/CSS/Kendo/kendo.common.min.css" );
-            Rock.Web.UI.Page.AddCSSLink( this.Page, "~/CSS/Kendo/kendo.rock.min.css" );
+            EnsureChildControls();
 
             string script = string.Format( @"
     $(document).ready(function() {{
 
-        $('#{0}').kendoUpload({{
-            multiple: false,
-            showFileList: false,
-            async: {{
-                saveUrl: rock.baseUrl + 'ImageUploader.ashx'
-            }},
+        function ConfigureImageUploaders(sender, args) {{
+            $('#{0}').kendoUpload({{
+                multiple: false,
+                showFileList: false,
+                async: {{
+                    saveUrl: '{4}ImageUploader.ashx'
+                }},
 
-            success: function(e) {{
+                success: function(e) {{
 
-                if (e.operation == 'upload' && e.response != '0') {{
-                    $('#{1}').val(e.response);
-                    $('#{2}').attr('src',rock.baseUrl + 'Image.ashx?id=' + e.response + '&width=50&height=50');
-                    $('#{2}').show('fast', function() {{ 
-                        if ($('#modal-scroll-container').length) {{
-                            $('#modal-scroll-container').tinyscrollbar_update('relative');
-                        }}
-                    }});
-                    $('#{3}').show('fast');
-                }}
+                    if (e.operation == 'upload' && e.response != '0') {{
+                        $('#{1}').val(e.response);
+                        $('#{2}').attr('src','')
+                        $('#{2}').hide();             
+                        $('#{2}').attr('src','{4}Image.ashx?id=' + e.response + '&width=50&height=50');
+                        $('#{2}').show('fast', function() {{ 
+                            if ($('#modal-scroll-container').length) {{
+                                $('#modal-scroll-container').tinyscrollbar_update('relative');
+                            }}
+                        }});
+                        $('#{3}').show('fast');
+                    }}
 
-            }}
-        }});
-
-        $('#{3}').click( function(){{
-            $(this).hide('fast');
-            $('#{1}').val('0');
-            $('#{2}').attr('src','')
-            $('#{2}').hide('fast', function() {{ 
-                if ($('#modal-scroll-container').length) {{
-                    $('#modal-scroll-container').tinyscrollbar_update('relative');
                 }}
             }});
-        }});
 
+            $('#{3}').click( function(){{
+                $(this).hide('fast');
+                $('#{1}').val('0');
+                $('#{2}').attr('src','')
+                $('#{2}').hide('fast', function() {{ 
+                    if ($('#modal-scroll-container').length) {{
+                        $('#modal-scroll-container').tinyscrollbar_update('relative');
+                    }}
+                }});
+            }});
+
+        }}
+
+        // configure image uploaders         
+        ConfigureImageUploaders(null, null);
     }});
-        ", 
-                fileUpload.ClientID, 
-                hiddenField.ClientID, 
-                image.ClientID,
-                htmlAnchor.ClientID);
-         
-            this.Page.ClientScript.RegisterStartupScript( this.GetType(), "image-selector-kendo-" + this.ID.ToString(), script, true );
+        ",
+                            fileUpload.ClientID,
+                            hiddenField.ClientID,
+                            image.ClientID,
+                            htmlAnchor.ClientID,
+                            ResolveUrl( "~" ) );
+
+            ScriptManager.RegisterStartupScript( fileUpload, fileUpload.GetType(), "KendoImageScript_" + this.ID, script, true );
         }
 
         /// <summary>
         /// Renders a label and <see cref="T:System.Web.UI.WebControls.TextBox"/> control to the specified <see cref="T:System.Web.UI.HtmlTextWriter"/> object.
         /// </summary>
         /// <param name="writer">The <see cref="T:System.Web.UI.HtmlTextWriter"/> that receives the rendered output.</param>
-        public override void  RenderControl(HtmlTextWriter writer)
+        public override void RenderControl( HtmlTextWriter writer )
         {
+            writer.AddAttribute( "class", "control-group" );
+            writer.RenderBeginTag( HtmlTextWriterTag.Div );
+
+            label.AddCssClass( "control-label" );
+            label.RenderControl( writer );
+
+            writer.AddAttribute( "class", "controls" );
+            writer.RenderBeginTag( HtmlTextWriterTag.Div );
+            
             writer.AddAttribute( "class", "rock-image" );
             writer.RenderBeginTag( HtmlTextWriterTag.Div );
 
-            if ( !string.IsNullOrEmpty( ImageId ) && ImageId != "0" )
+            if ( ImageId.HasValue )
             {
                 image.Style["display"] = "inline";
-                image.ImageUrl = "~/image.ashx?" + ImageId + "&width=50&height=50";
+                image.ImageUrl = "~/image.ashx?" + ImageId.Value.ToString() + "&width=50&height=50";
             }
             else
             {
@@ -139,6 +189,10 @@ namespace Rock.Web.UI.Controls
             fileUpload.Attributes["name"] = string.Format( "{0}[]", base.ID );
             fileUpload.RenderControl( writer );
             writer.RenderEndTag();
+            
+            writer.RenderEndTag();
+
+            writer.RenderEndTag();
 
             writer.RenderEndTag();
         }
@@ -148,9 +202,14 @@ namespace Rock.Web.UI.Controls
         /// </summary>
         protected override void CreateChildControls()
         {
+            label = new Label();
+            Controls.Add( label );
+            
             image = new Image();
             image.ID = "img";
             Controls.Add( image );
+
+            label.AssociatedControlID = image.ID;
 
             hiddenField = new HiddenField();
             hiddenField.ID = "hf";
